@@ -53,6 +53,13 @@
 
   <script>
     let currentRide = null;
+    function saveCurrentRide() {
+  localStorage.setItem(
+    "taxiCurrentRide",
+    JSON.stringify(currentRide)
+  );
+  saveCurrentRide();
+}
     let rides = JSON.parse(localStorage.getItem("taxiRides") || "[]");
 
     function saveRides() {
@@ -126,7 +133,13 @@
         renderHistory();
       });
     }
+function loadCurrentRide() {
+  const saved = localStorage.getItem("taxiCurrentRide");
 
+  if (saved) {
+    currentRide = JSON.parse(saved);
+  }
+}
     function renderHistory() {
       const history = document.getElementById("history");
       history.innerHTML = "";
@@ -167,7 +180,7 @@
         history.appendChild(item);
       });
     }
-
+    loadCurrentRide();
     renderHistory();
   </script>
 </body>
