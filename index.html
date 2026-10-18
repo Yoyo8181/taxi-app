@@ -5,6 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>タクシー売上管理</title>
+  <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     body {
       font-family: sans-serif;
@@ -82,6 +88,9 @@
   <h2>日別売上</h2>
   <div id="dailySales"></div>
 
+  <h2>乗降地点マップ</h2>
+  <div id="map" style="height: 350px; border-radius: 8px;"></div>
+  
   <h2>乗車履歴</h2>
   <div id="history"></div>
 
@@ -208,6 +217,89 @@
       });
     }
 
+
+let map;
+let mapMarkers = [];
+
+function initializeMap() {
+  map = L.map("map").setView([35.1709, 136.8815], 11);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors"
+  }).addTo(map);
+}
+
+function renderMapMarkers() {
+  if (!map) return;
+
+  mapMarkers.forEach(function(marker) {
+    map.removeLayer(marker);
+  });
+  mapMarkers = [];
+
+  const points = [];
+
+  rides.forEach(function(ride) {
+    if (ride.pickup) {
+      points.push({
+        location: ride.pickup,
+        label: "乗車地点",
+        color: "blue"
+      });
+    }
+
+    if (ride.dropoff) {
+      points.push({
+        location: ride.dropoff,
+        label: "降車地点",
+        color: "red"
+      });
+    }
+  });
+
+  if (currentRide && currentRide.pickup) {
+    points.push({
+      location: currentRide.pickup,
+      label: "乗車中の乗車地点",
+      color: "blue"
+    });
+  }
+
+  points.forEach(function(point) {
+    const location = point.location;
+
+    if (
+      typeof location.lat !== "number" ||
+      typeof location.lon !== "number"
+    ) {
+      return;
+    }
+
+    const marker = L.marker([location.lat, location.lon])
+      .addTo(map)
+      .bindPopup(
+        point.label + "<br>" + formatTime(location.time)
+      );
+
+    mapMarkers.push(marker);
+  });
+
+  if (points.length > 0) {
+    const validPoints = points
+      .filter(function(point) {
+        return typeof point.location.lat === "number" &&
+               typeof point.location.lon === "number";
+      })
+      .map(function(point) {
+        return [point.location.lat, point.location.lon];
+      });
+
+    if (validPoints.length > 0) {
+      map.fitBounds(validPoints, { padding: [25, 25], maxZoom: 15 });
+    }
+  }
+}
+
     function renderHistory() {
       const dailyTotals = {};
 
@@ -268,7 +360,7 @@
 
       document.getElementById("todayAverage").textContent =
         formatYen(Math.round(todayAverage));
-           
+
       document.getElementById("totalSales").textContent =
         formatYen(totalSales);
 
@@ -318,7 +410,9 @@
     }
 
     loadCurrentRide();
+    initializeMap();
     renderHistory();
+    renderMapMarkers();
   </script>
 </body>
 </html>
