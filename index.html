@@ -113,6 +113,151 @@
         return;
       }
 
+      const fareInput = document.getElementById("fare");
+
+      if (fareInput.value === "" || Number(fareInput.value) < 0) {
+        document.getElementById("message").textContent =
+          "降車前に運賃を入力してね。";
+        return;
+      }
+
+      getLocation(function(location) {
+        currentRide = {
+          pickup: location,
+          dropoff: null
+        };
+
+        saveCurrentRide();
+
+        document.getElementById("message").textContent =
+          "乗車を記録したよ！ 降車したら降車ボタンを押してね。";
+
+        saveRides();
+        renderHistory();
+      });
+    }
+
+    function recordDrop() {
+      if (!currentRide) {
+        document.getElementById("message").textContent =
+          "先に乗車ボタンを押してね。";
+        return;
+      }
+<!DO
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タクシー売上管理</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    h1 { font-size: 24px; }
+    button {
+      padding: 14px 18px;
+      margin: 5px 3px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .start { background: #1769aa; color: white; }
+    .end { background: #24864b; color: white; }
+    .record {
+      background: white;
+      padding: 14px;
+      margin: 12px 0;
+      border-radius: 8px;
+      overflow-wrap: anywhere;
+    }
+    #message {
+      margin: 15px 0;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+    }
+    .small { font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>🚕 タクシー売上管理</h1>
+  <p>よよのアプリ開発、ステップアップ！</p>
+
+  <button class="start" onclick="recordRide()">乗車</button>
+  <button class="end" onclick="recordDrop()">降車</button>
+
+  <div>
+    <label for="fare">運賃（円）</label>
+    <input type="number" id="fare" min="0" step="10" placeholder="例：1800">
+  </div>
+
+  <div id="message">乗車ボタンから記録を始めよう。</div>
+
+
+  <h2>今日の売上</h2>
+  <div id="todaySales">0円</div>
+
+  <h2>累計売上</h2>
+  <div id="totalSales">0円</div>
+
+  <h2>日別売上</h2>
+  <div id="dailySales"></div>
+  
+  <h2>乗車履歴</h2>
+  <div id="history"></div>
+
+  <script>
+    let currentRide = null;
+    function saveCurrentRide() {
+  localStorage.setItem(
+    "taxiCurrentRide",
+    JSON.stringify(currentRide)
+  );
+}
+    let rides = JSON.parse(localStorage.getItem("taxiRides") || "[]");
+
+    function saveRides() {
+      localStorage.setItem("taxiRides", JSON.stringify(rides));
+    }
+
+    function getLocation(callback) {
+      const message = document.getElementById("message");
+
+      if (!navigator.geolocation) {
+        message.textContent = "このブラウザはGPSに対応していません。";
+        return;
+      }
+
+      message.textContent = "現在地を取得しています...";
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          callback({
+            time: new Date().toLocaleString("ja-JP"),
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        function() {
+          message.textContent =
+            "位置情報を取得できませんでした。位置情報の許可や通信を確認してください。";
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }
+
+    function recordRide() {
+      if (currentRide) {
+        document.getElementById("message").textContent =
+          "まだ降車が記録されていないよ。先に降車ボタンを押してね。";
+        return;
+      }
+
       getLocation(function(location) {
         currentRide = {
           pickup: location,
@@ -190,6 +335,128 @@ function loadCurrentRide() {
         dailySales.textContent = "まだ売上記録はありません。";
       }
       
+      const today = new Date().toLocaleDateString("ja-JP");
+
+      const todaySales = rides.reduce(function(total, ride) {
+        const rideDate = new Date(ride.dropoff.time)
+          .toLocaleDateString("ja-JP");
+
+        if (rideDate === today) {
+          return total + (Number(ride.fare) || 0);
+        }
+
+        return total;
+      }, 0);
+
+      const totalSales = rides.reduce(function(total, ride) {
+        return total + (Number(ride.fare) || 0);
+      }, 0);
+
+      document.getElementById("todaySales").textContent =
+        todaySales.toLocaleString("ja-JP") + "円";
+
+      document.getElementById("totalSales").textContent =
+        totalSales.toLocaleString("ja-JP") + "円";
+      const history = document.getElementById("history");
+      history.innerHTML = "";
+
+      if (currentRide) {
+        const current = document.createElement("div");
+        current.className = "record";
+        current.innerHTML =
+          "<strong>乗車中（記録待ち）</strong><br>" +
+          "乗車時刻：" + currentRide.pickup.time +
+          "<p class='small'>乗車地点：" +
+          currentRide.pickup.lat + ", " + currentRide.pickup.lon +
+          "</p>";
+        history.appendChild(current);
+      }
+
+      if (rides.length === 0 && !currentRide) {
+        history.textContent = "まだ履歴はありません。";
+        return;
+      }
+
+      rides.forEach(function(ride, index) {
+        const item = document.createElement("div");
+        item.className = "record";
+
+        const pickup = ride.pickup;
+        const dropoff = ride.dropoff;
+
+        item.innerHTML =
+          "<strong>記録 " + (rides.length - index) + "</strong><br>" +
+          "乗車時刻：" + pickup.time + "<br>" +
+          "降車時刻：" + dropoff.time + "<br>" +
+          "運賃：" + (ride.fare || 0).toLocaleString("ja-JP") + "円" 
+          "<p class='small'>乗車地点：" +
+          pickup.lat + ", " + pickup.lon + "</p>" +
+          "<p class='small'>降車地点：" +
+          dropoff.lat + ", " + dropoff.lon + "</p>";
+
+        history.appendChild(item);
+      });
+    }
+    loadCurrentRide();
+    renderHistory();
+  </script>
+</body>
+</html>
+
+      getLocation(function(location) {
+        currentRide.dropoff = location;
+
+        const fareInput = document.getElementById("fare");
+        currentRide.fare = Number(fareInput.value) || 0;
+
+        rides.unshift(currentRide);
+        currentRide = null;
+
+        saveCurrentRide();
+        saveRides();
+
+        document.getElementById("message").textContent =
+          "降車を記録したよ！ 履歴に保存したよ。";
+
+        renderHistory();
+      });
+    }
+function loadCurrentRide() {
+  const saved = localStorage.getItem("taxiCurrentRide");
+
+  if (saved) {
+    currentRide = JSON.parse(saved);
+  }
+}
+    function renderHistory() {
+     
+    
+      const dailyTotals = {};
+
+      rides.forEach(function(ride) {
+        const date = new Date(ride.dropoff.time)
+          .toLocaleDateString("ja-JP");
+
+        dailyTotals[date] =
+          (dailyTotals[date] || 0) + (Number(ride.fare) || 0);
+      });
+
+      const dailySales = document.getElementById("dailySales");
+      dailySales.innerHTML = "";
+
+      Object.keys(dailyTotals).forEach(function(date) {
+        const item = document.createElement("div");
+        item.className = "record";
+        item.textContent =
+          date + "：" + dailyTotals[date].toLocaleString("ja-JP") + "円";
+
+        dailySales.appendChild(item);
+      });
+
+      if (Object.keys(dailyTotals).length === 0) {
+        dailySales.textContent = "まだ売上記録はありません。";
+      }
+
       const today = new Date().toLocaleDateString("ja-JP");
 
       const todaySales = rides.reduce(function(total, ride) {
