@@ -46,8 +46,16 @@
   <button class="start" onclick="recordRide()">乗車</button>
   <button class="end" onclick="recordDrop()">降車</button>
 
+  <div>
+    <label for="fare">運賃（円）</label>
+    <input type="number" id="fare" min="0" step="10" placeholder="例：1800">
+  </div>
+
   <div id="message">乗車ボタンから記録を始めよう。</div>
 
+
+  <h2>売上合計</h2>
+  <div id="totalSales">0円</div>
   <h2>乗車履歴</h2>
   <div id="history"></div>
 
@@ -123,6 +131,10 @@
 
       getLocation(function(location) {
         currentRide.dropoff = location;
+
+        const fareInput = document.getElementById("fare");
+        currentRide.fare = Number(fareInput.value) || 0;
+
         rides.unshift(currentRide);
         currentRide = null;
 
@@ -143,6 +155,12 @@ function loadCurrentRide() {
   }
 }
     function renderHistory() {
+      const totalSales = rides.reduce(function(total, ride) {
+        return total + (Number(ride.fare) || 0);
+      }, 0);
+
+      document.getElementById("totalSales").textContent =
+        totalSales.toLocaleString("ja-JP") + "円";
       const history = document.getElementById("history");
       history.innerHTML = "";
 
@@ -173,7 +191,8 @@ function loadCurrentRide() {
         item.innerHTML =
           "<strong>記録 " + (rides.length - index) + "</strong><br>" +
           "乗車時刻：" + pickup.time + "<br>" +
-          "降車時刻：" + dropoff.time +
+          "降車時刻：" + dropoff.time + "<br>" +
+          "運賃：" + (ride.fare || 0).toLocaleString("ja-JP") + "円" 
           "<p class='small'>乗車地点：" +
           pickup.lat + ", " + pickup.lon + "</p>" +
           "<p class='small'>降車地点：" +
