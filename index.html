@@ -70,6 +70,12 @@
   <h2>今日の売上</h2>
   <div id="todaySales">0円</div>
 
+  <h2>今日の営業回数</h2>
+  <div id="todayCount">0回</div>
+
+  <h2>今日の平均単価</h2>
+  <div id="todayAverage">0円</div>
+
   <h2>累計売上</h2>
   <div id="totalSales">0円</div>
 
@@ -245,6 +251,24 @@
       document.getElementById("todaySales").textContent =
         formatYen(todayTotal);
 
+           // 今日の営業回数を数える
+      const todayCount = rides.filter(function(ride) {
+        if (!ride.dropoff || !ride.dropoff.time) return false;
+        return formatDate(ride.dropoff.time) === today;
+      }).length;
+
+      // 今日の平均単価を計算する
+      const todayAverage = todayCount > 0
+        ? todayTotal / todayCount
+        : 0;
+
+      // 画面に表示する
+      document.getElementById("todayCount").textContent =
+        todayCount + "回";
+
+      document.getElementById("todayAverage").textContent =
+        formatYen(Math.round(todayAverage));
+           
       document.getElementById("totalSales").textContent =
         formatYen(totalSales);
 
