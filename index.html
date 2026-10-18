@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タクシー売上管理</title>
+</head>
+<body>
+  <h1>タクシー売上管理アプリ</h1>
+  <p>よよのアプリ開発、スタート！</p>
+
+  <button onclick="recordRide()">乗車</button>
+  <button onclick="recordDrop()">降車</button>
+
+  <div id="message">ここに記録が表示されます</div>
+
+  <script>
+    let rideStart = null;
+
+    function getLocation(action) {
+      const message = document.getElementById("message");
+
+      if (!navigator.geolocation) {
+        message.textContent = "このブラウザはGPSに対応していません。";
+        return;
+      }
+
+      message.textContent = "現在地を取得しています...";
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const time = new Date().toLocaleString("ja-JP");
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          if (action === "乗車") {
+            rideStart = { time, lat, lon };
+            message.innerHTML =
+              "乗車を記録しました！<br>" +
+              "時刻：" + time + "<br>" +
+              "緯度：" + lat + "<br>" +
+              "経度：" + lon;
+          } else {
+            message.innerHTML =
+              "降車を記録しました！<br>" +
+              "時刻：" + time + "<br>" +
+              "緯度：" + lat + "<br>" +
+              "経度：" + lon;
+
+            if (rideStart) {
+              message.innerHTML +=
+                "<br>乗車時刻：" + rideStart.time +
+                "<br>乗車地点： " +
+                rideStart.lat + ", " + rideStart.lon;
+            }
+          }
+        },
+        function(error) {
+          message.textContent =
+            "位置情報を取得できませんでした。位置情報の許可や接続を確認してください。";
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }
+
+    function recordRide() {
+      getLocation("乗車");
+    }
+
+    function recordDrop() {
+      getLocation("降車");
+    }
+  </script>
+</body>
+</html>
