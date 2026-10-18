@@ -54,8 +54,12 @@
   <div id="message">乗車ボタンから記録を始めよう。</div>
 
 
-  <h2>売上合計</h2>
+  <h2>今日の売上</h2>
+  <div id="todaySales">0円</div>
+
+  <h2>累計売上</h2>
   <div id="totalSales">0円</div>
+
   <h2>乗車履歴</h2>
   <div id="history"></div>
 
@@ -155,9 +159,26 @@ function loadCurrentRide() {
   }
 }
     function renderHistory() {
+     
+      const today = new Date().toLocaleDateString("ja-JP");
+
+      const todaySales = rides.reduce(function(total, ride) {
+        const rideDate = new Date(ride.dropoff.time)
+          .toLocaleDateString("ja-JP");
+
+        if (rideDate === today) {
+          return total + (Number(ride.fare) || 0);
+        }
+
+        return total;
+      }, 0);
+
       const totalSales = rides.reduce(function(total, ride) {
         return total + (Number(ride.fare) || 0);
       }, 0);
+
+      document.getElementById("todaySales").textContent =
+        todaySales.toLocaleString("ja-JP") + "円";
 
       document.getElementById("totalSales").textContent =
         totalSales.toLocaleString("ja-JP") + "円";
