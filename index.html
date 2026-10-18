@@ -60,6 +60,9 @@
   <h2>累計売上</h2>
   <div id="totalSales">0円</div>
 
+  <h2>日別売上</h2>
+  <div id="dailySales"></div>
+  
   <h2>乗車履歴</h2>
   <div id="history"></div>
 
@@ -160,6 +163,33 @@ function loadCurrentRide() {
 }
     function renderHistory() {
      
+    
+      const dailyTotals = {};
+
+      rides.forEach(function(ride) {
+        const date = new Date(ride.dropoff.time)
+          .toLocaleDateString("ja-JP");
+
+        dailyTotals[date] =
+          (dailyTotals[date] || 0) + (Number(ride.fare) || 0);
+      });
+
+      const dailySales = document.getElementById("dailySales");
+      dailySales.innerHTML = "";
+
+      Object.keys(dailyTotals).forEach(function(date) {
+        const item = document.createElement("div");
+        item.className = "record";
+        item.textContent =
+          date + "：" + dailyTotals[date].toLocaleString("ja-JP") + "円";
+
+        dailySales.appendChild(item);
+      });
+
+      if (Object.keys(dailyTotals).length === 0) {
+        dailySales.textContent = "まだ売上記録はありません。";
+      }
+      
       const today = new Date().toLocaleDateString("ja-JP");
 
       const todaySales = rides.reduce(function(total, ride) {
