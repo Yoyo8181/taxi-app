@@ -104,6 +104,8 @@
           dropoff: null
         };
 
+        saveCurrentRide();
+
         document.getElementById("message").textContent =
           "乗車を記録したよ！ 降車したら降車ボタンを押してね。";
 
@@ -124,6 +126,7 @@
         rides.unshift(currentRide);
         currentRide = null;
 
+        saveCurrentRide();
         saveRides();
 
         document.getElementById("message").textContent =
