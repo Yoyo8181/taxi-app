@@ -919,39 +919,26 @@ function initMap() {
   renderMap();
 }
 
-function renderMap() {
-  if (!mapReady) return;
-
-  markerLayer.clearLayers();
-  routeLayer.clearLayers();
-
-  const points = [];
-
-  rides.forEach(ride => {
-    if (ride.pickup?.lat != null && ride.pickup?.lon != null) {
-      const ll = [ride.pickup.lat, ride.pickup.lon];
+  rides.forEach(r => {
+    if (r.pickup?.lat != null && r.pickup?.lon != null) {
+      const ll = [r.pickup.lat, r.pickup.lon];
       points.push(ll);
-      L.circleMarker(ll, {
-        radius:7,color:"#13884c",fillColor:"#27b56d",fillOpacity:.9
-      }).bindPopup("乗車<br>" + localDateTime(ride.pickup.time))
+      L.marker(ll)
+        .bindPopup("乗車<br>" + localDateTime(r.pickup.time))
         .addTo(markerLayer);
     }
-    if (ride.dropoff?.lat != null && ride.dropoff?.lon != null) {
-      const ll = [ride.dropoff.lat, ride.dropoff.lon];
-      points.push(ll);
-      L.circleMarker(ll, {
-        radius:7,color:"#b42d37",fillColor:"#e04a52",fillOpacity:.9
-      }).bindPopup("降車<br>" + localDateTime(ride.dropoff.time) +
-        "<br>運賃：" + yen(ride.fare)).addTo(markerLayer);
 
-      if (ride.pickup?.lat != null && ride.pickup?.lon != null) {
-        L.polyline([
-          [ride.pickup.lat,ride.pickup.lon],ll
-        ],{color:"#8a6bc1",weight:3,opacity:.7}).addTo(routeLayer);
-      }
+    if (r.dropoff?.lat != null && r.dropoff?.lon != null) {
+      const ll = [r.dropoff.lat, r.dropoff.lon];
+      points.push(ll);
+      L.marker(ll)
+        .bindPopup("降車<br>" + localDateTime(r.dropoff.time))
+        .addTo(markerLayer);
     }
   });
 
+function renderMap() {
+ 
   const trackCoords = trackPoints
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon))
     .map(p => [p.lat,p.lon]);
