@@ -3,188 +3,720 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>タクシー売上管理</title>
-  <link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>タクシー営業記録</title>
+
+  <link rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
   <style>
+    * { box-sizing: border-box; }
+
     body {
       font-family: sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f5f7fa;
+      max-width: 850px;
+      margin: auto;
+      padding: 14px;
+      background: #f4f6f8;
+      color: #222;
     }
-    h1 { font-size: 24px; }
+
+    h1 { font-size: 25px; }
+    h2 { font-size: 19px; margin-top: 26px; }
+
+    .card {
+      background: white;
+      padding: 15px;
+      margin: 12px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px #00000012;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
     button {
-      padding: 14px 18px;
-      margin: 5px 3px;
       border: none;
       border-radius: 8px;
-      font-size: 16px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: bold;
+      color: white;
+      background: #455a64;
       cursor: pointer;
     }
-    .start { background: #1769aa; color: white; }
-    .end { background: #24864b; color: white; }
-    input {
-      box-sizing: border-box;
+
+    button:disabled { opacity: .5; }
+
+    .green { background: #27864a; }
+    .red { background: #d43d3d; }
+    .blue { background: #1976d2; }
+    .orange { background: #df7900; }
+    .purple { background: #7e45b5; }
+    .gray { background: #68727b; }
+
+    input, select {
       width: 100%;
       padding: 12px;
-      margin-top: 8px;
       font-size: 16px;
-    }
-    .record {
+      border: 1px solid #bbb;
+      border-radius: 7px;
+      margin: 6px 0 12px;
       background: white;
-      padding: 14px;
-      margin: 12px 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      background: #f0f4f7;
+      padding: 12px;
       border-radius: 8px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 21px;
+      margin-top: 5px;
       overflow-wrap: anywhere;
     }
-    #message {
-      margin: 15px 0;
-      padding: 12px;
-      background: white;
-      border-radius: 8px;
+
+    #map {
+      height: 380px;
+      border-radius: 10px;
+      z-index: 1;
     }
-    .small { font-size: 13px; color: #555; }
+
+    .hint {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .ride {
+      border-top: 1px solid #ddd;
+      padding: 12px 0;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      font-size: 19px;
+      font-weight: bold;
+    }
+
+    .blueText { color: #1976d2; }
+    .orangeText { color: #df7900; }
+
+    .legend span { margin-right: 12px; }
   </style>
 </head>
+
 <body>
-  <h1>🚕 タクシー売上管理</h1>
-  <p>よよのアプリ開発、ステップアップ！</p>
+  <h1>🚕 タクシー営業記録</h1>
 
-  <button class="start" onclick="recordRide()">乗車</button>
-  <button class="end" onclick="recordDrop()">降車</button>
+  <div class="card">
+    <h2>営業状態</h2>
+    <div id="status" class="status">空車</div>
+    <p id="shiftStatus">出庫していません</p>
 
-  <div>
-    <label for="fare">運賃（円）</label>
-    <input
-      type="number"
-      id="fare"
-      min="0"
-      step="10"
-      placeholder="例：1800"
-    >
+    <div class="buttons">
+      <button class="gray" onclick="recordDepot('out')">出庫</button>
+      <button class="gray" onclick="recordDepot('back')">帰庫</button>
+    </div>
+
+    <div class="buttons">
+      <button class="blue" onclick="changeMode('empty')">空車に切替</button>
+      <button class="orange" onclick="changeMode('occupied')">賃走に切替</button>
+    </div>
+
+    <p class="hint">
+      出庫中はGPS走行記録を行います。乗車・降車でも状態が自動で切り替わります。
+    </p>
   </div>
 
-  <div id="message">乗車ボタンから記録を始めよう。</div>
+  <div class="card">
+    <h2>乗車・降車記録</h2>
 
-  <h2>今日の売上</h2>
-  <div id="todaySales">0円</div>
+    <div id="currentStatus">現在、乗車記録はありません。</div>
 
-  <h2>今日の営業回数</h2>
-  <div id="todayCount">0回</div>
+    <div class="buttons">
+      <button id="pickupButton" class="green" onclick="recordPickup()">
+        乗車・乗車位置を記録
+      </button>
+    </div>
 
-  <h2>今日の平均単価</h2>
-  <div id="todayAverage">0円</div>
+    <label for="fare">運賃（円）</label>
+    <input id="fare" type="number" min="0" step="10"
+      inputmode="numeric" placeholder="例：1800">
 
-  <h2>累計売上</h2>
-  <div id="totalSales">0円</div>
+    <label for="service">利用サービス</label>
+    <select id="service">
+      <option value="">選択してください</option>
+      <option value="Uber">Uber</option>
+      <option value="GO">GO</option>
+      <option value="流し・付け待ち">流し・付け待ち</option>
+      <option value="その他">その他</option>
+    </select>
 
-  <h2>日別売上</h2>
-  <div id="dailySales"></div>
+    <button id="dropButton" class="red" onclick="recordDropoff()">
+      降車・売上を記録
+    </button>
 
-  <h2>乗降地点マップ</h2>
-  <div id="map" style="height: 350px; border-radius: 8px;"></div>
-  
-  <h2>乗車履歴</h2>
-  <div id="history"></div>
+    <p class="hint">
+      注文通知ボタンを押し忘れても、ここでサービスを選択できます。
+      運賃を入力して降車を記録してください。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>注文通知位置</h2>
+    <p class="hint">
+      Uber・GOなどの注文通知が来た場所を記録します。
+      次の乗車のサービスとして自動選択されます。
+    </p>
+
+    <div class="buttons">
+      <button class="purple" onclick="recordPing('Uber')">
+        Uber通知
+      </button>
+      <button class="purple" onclick="recordPing('GO')">
+        GO通知
+      </button>
+      <button class="purple" onclick="recordPing('その他')">
+        その他通知
+      </button>
+    </div>
+
+    <div id="pendingService" class="hint">
+      次の乗車に設定するサービス：なし
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>本日の売上</h2>
+    <div class="stats">
+      <div class="stat">売上<strong id="todaySales">0円</strong></div>
+      <div class="stat">乗車件数<strong id="todayCount">0件</strong></div>
+      <div class="stat">平均単価<strong id="todayAverage">0円</strong></div>
+      <div class="stat">記録済み総件数<strong id="totalCount">0件</strong></div>
+    </div>
+
+    <h2>サービス別売上（本日）</h2>
+    <div id="serviceStats"></div>
+  </div>
+
+  <div class="card">
+    <h2>乗降地点・走行マップ</h2>
+
+    <div class="legend hint">
+      <span>🟢 乗車</span>
+      <span>🔴 降車</span>
+      <span>🟣 注文通知</span>
+      <span>⚫ 出庫・帰庫</span>
+    </div>
+    <p class="hint">
+      走行線：青＝空車、オレンジ＝賃走。
+      乗車地点と降車地点は直線で結びます。
+    </p>
+
+    <div id="map"></div>
+  </div>
+
+  <div class="card">
+    <h2>乗降履歴</h2>
+    <div id="history"></div>
+  </div>
+
+  <div class="card">
+    <h2>営業イベント履歴</h2>
+    <div id="eventHistory"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    let currentRide = null;
-    let rides = JSON.parse(localStorage.getItem("taxiRides") || "[]");
+    // --------------------------------------------------
+    // 保存データ
+    // 既存の taxiRides / taxiCurrentRide を引き継ぐ
+    // --------------------------------------------------
 
-    function saveCurrentRide() {
-      localStorage.setItem(
-        "taxiCurrentRide",
-        JSON.stringify(currentRide)
-      );
-    }
+    let rides = readStorage("taxiRides", []);
+    let currentRide = readStorage("taxiCurrentRide", null);
+    let events = readStorage("taxiEvents", []);
+    let trackPoints = readStorage("taxiTrackPoints", []);
+    let mode = readStorage("taxiMode", "empty");
+    let shiftActive = readStorage("taxiShiftActive", false);
+    let pendingService = readStorage("taxiPendingService", "");
 
-    function saveRides() {
-      localStorage.setItem("taxiRides", JSON.stringify(rides));
-    }
+    let map;
+    let watchId = null;
+    let mapLayers = [];
 
-    function loadCurrentRide() {
-      const saved = localStorage.getItem("taxiCurrentRide");
-
-      if (saved) {
-        try {
-          currentRide = JSON.parse(saved);
-        } catch (error) {
-          currentRide = null;
-        }
+    function readStorage(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value === null ? fallback : JSON.parse(value);
+      } catch (error) {
+        alert("保存データ「" + key +
+          "」を読み込めませんでした。元のデータを消さずに確認してください。");
+        return fallback;
       }
     }
 
-    function getLocation(callback) {
-      const message = document.getElementById("message");
-
-      if (!navigator.geolocation) {
-        message.textContent = "このブラウザはGPSに対応していません。";
-        return;
+    function save(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        alert("保存できませんでした。端末の空き容量を確認してください。");
       }
-
-      message.textContent = "現在地を取得しています...";
-
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          callback({
-            time: new Date().toISOString(),
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          });
-        },
-        function() {
-          message.textContent =
-            "位置情報を取得できませんでした。位置情報の許可や通信を確認してください。";
-        },
-        { enableHighAccuracy: true, timeout: 15000 }
-      );
     }
 
-    function formatTime(time) {
-      return new Date(time).toLocaleString("ja-JP");
+    function saveAll() {
+      save("taxiRides", rides);
+      save("taxiCurrentRide", currentRide);
+      save("taxiEvents", events);
+      save("taxiTrackPoints", trackPoints);
+      save("taxiMode", mode);
+      save("taxiShiftActive", shiftActive);
+      save("taxiPendingService", pendingService);
     }
 
-    function formatDate(time) {
-      return new Date(time).toLocaleDateString("ja-JP");
+    // --------------------------------------------------
+    // 共通処理
+    // --------------------------------------------------
+
+    function now() {
+      return new Date().toISOString();
     }
 
-    function formatYen(amount) {
-      return (Number(amount) || 0).toLocaleString("ja-JP") + "円";
-    }
+    function formatTime(value) {
+      if (!value) return "未記録";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "時刻不明";
 
-    function recordRide() {
-      if (currentRide) {
-        document.getElementById("message").textContent =
-          "まだ降車が記録されていないよ。先に降車ボタンを押してね。";
-        return;
-      }
-
-      getLocation(function(location) {
-        currentRide = {
-          pickup: location,
-          dropoff: null
-        };
-
-        saveCurrentRide();
-
-        document.getElementById("message").textContent =
-          "乗車を記録したよ！ 降車したら運賃を入力してね。";
-
-        renderHistory();
+      return d.toLocaleString("ja-JP", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     }
 
-    function recordDrop() {
+    function yen(value) {
+      return Math.round(Number(value) || 0).toLocaleString("ja-JP") + "円";
+    }
+
+    function todayKey(value) {
+      const d = new Date(value);
+      return d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0");
+    }
+
+    function isToday(value) {
+      return value && todayKey(value) === todayKey(new Date());
+    }
+
+    function getLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error("このブラウザはGPSに対応していません。"));
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            resolve({
+              time: new Date(position.timestamp).toISOString(),
+              lat: position.coords.latitude,
+              lon: position.coords.longitude
+            });
+          },
+          error => {
+            const messages = {
+              1: "位置情報が許可されていません。ブラウザの設定を確認してください。",
+              2: "現在地を取得できません。GPSの状態を確認してください。",
+              3: "GPS取得がタイムアウトしました。もう一度試してください。"
+            };
+            reject(new Error(messages[error.code] || "GPSを取得できませんでした。"));
+          },
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+      });
+    }
+
+    function validLocation(location) {
+      return location &&
+        Number.isFinite(Number(location.lat)) &&
+        Number.isFinite(Number(location.lon)) &&
+        location.lat >= -90 && location.lat <= 90 &&
+        location.lon >= -180 && location.lon <= 180;
+    }
+
+    function notifyError(error) {
+      alert(error.message || "処理に失敗しました。");
+    }
+
+    // --------------------------------------------------
+    // 地図
+    // --------------------------------------------------
+
+    function initializeMap() {
+      map = L.map("map").setView([35.1709, 136.8815], 11);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      renderMap();
+    }
+
+    function markerIcon(color) {
+      return new L.Icon({
+        iconUrl:
+          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-" +
+          color + ".png",
+        shadowUrl:
+          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+    }
+
+    function addMarker(location, color, label) {
+      if (!validLocation(location)) return;
+
+      const marker = L.marker(
+        [Number(location.lat), Number(location.lon)],
+        { icon: markerIcon(color) }
+      ).addTo(map);
+
+      marker.bindPopup(
+        label + "<br>" + formatTime(location.time)
+      );
+
+      mapLayers.push(marker);
+    }
+
+    function renderMap() {
+      if (!map) return;
+
+      mapLayers.forEach(layer => map.removeLayer(layer));
+      mapLayers = [];
+
+      const allPoints = [];
+
+      rides.forEach(ride => {
+        if (validLocation(ride.pickup)) {
+          addMarker(
+            ride.pickup, "green",
+            "乗車" + (ride.service ? "（" + ride.service + "）" : "")
+          );
+          allPoints.push([ride.pickup.lat, ride.pickup.lon]);
+        }
+
+        if (validLocation(ride.dropoff)) {
+          addMarker(
+            ride.dropoff, "red",
+            "降車・運賃 " + yen(ride.fare)
+          );
+          allPoints.push([ride.dropoff.lat, ride.dropoff.lon]);
+        }
+
+        // 乗車地点と降車地点を直線で結ぶ
+        if (validLocation(ride.pickup) && validLocation(ride.dropoff)) {
+          const line = L.polyline([
+            [ride.pickup.lat, ride.pickup.lon],
+            [ride.dropoff.lat, ride.dropoff.lon]
+          ], {
+            color: "#68727b",
+            weight: 2,
+            opacity: 0.65,
+            dashArray: "5, 7"
+          }).addTo(map);
+
+          mapLayers.push(line);
+        }
+      });
+
+      if (currentRide && validLocation(currentRide.pickup)) {
+        addMarker(currentRide.pickup, "green", "乗車中");
+        allPoints.push([currentRide.pickup.lat, currentRide.pickup.lon]);
+      }
+
+      events.forEach(event => {
+        if (!validLocation(event.location)) return;
+
+        let color = "grey";
+        let label = event.label || event.type;
+
+        if (event.type === "ping") {
+          color = "violet";
+          label = (event.service || "その他") + " 注文通知";
+        }
+
+        addMarker(event.location, color, label);
+        allPoints.push([event.location.lat, event.location.lon]);
+      });
+
+      // 空車・賃走のGPS走行線
+      let segment = [];
+
+      function drawSegment() {
+        if (segment.length >= 2) {
+          const line = L.polyline(
+            segment.map(point => [point.lat, point.lon]),
+            {
+              color: segment[0].mode === "occupied" ? "#df7900" : "#1976d2",
+              weight: 4,
+              opacity: 0.8
+            }
+          ).addTo(map);
+
+          mapLayers.push(line);
+        }
+      }
+
+      trackPoints.forEach(point => {
+        if (!validLocation(point)) return;
+
+        if (segment.length && segment[0].mode !== point.mode) {
+          drawSegment();
+          segment = [segment[segment.length - 1]];
+        }
+
+        segment.push(point);
+        allPoints.push([point.lat, point.lon]);
+      });
+
+      drawSegment();
+
+      if (allPoints.length) {
+        map.fitBounds(allPoints, { padding: [25, 25], maxZoom: 15 });
+      }
+    }
+
+    // --------------------------------------------------
+    // 営業状態とGPS走行記録
+    // --------------------------------------------------
+
+    function updateStatus() {
+      const status = document.getElementById("status");
+      status.textContent = mode === "occupied" ? "🟠 賃走中" : "🔵 空車";
+
+      status.className = "status " +
+        (mode === "occupied" ? "orangeText" : "blueText");
+
+      document.getElementById("shiftStatus").textContent =
+        shiftActive ? "出庫中・GPS走行記録中" : "出庫していません";
+
+      document.getElementById("currentStatus").textContent =
+        currentRide
+          ? "乗車中：" + formatTime(currentRide.pickup?.time)
+          : "現在、乗車記録はありません。";
+
+      document.getElementById("pickupButton").disabled = !!currentRide;
+      document.getElementById("dropButton").disabled = !currentRide;
+
+      document.getElementById("pendingService").textContent =
+        "次の乗車に設定するサービス：" + (pendingService || "なし");
+    }
+
+    async function changeMode(newMode) {
+      try {
+        const location = await getLocation();
+
+        mode = newMode;
+
+        events.push({
+          type: "mode",
+          label: newMode === "occupied" ? "賃走に切替" : "空車に切替",
+          location,
+          mode: newMode
+        });
+
+        addTrackPoint(location);
+        saveAll();
+        refresh();
+      } catch (error) {
+        notifyError(error);
+      }
+    }
+
+    function addTrackPoint(location) {
+      if (!validLocation(location)) return;
+
+      const point = {
+        time: location.time || now(),
+        lat: Number(location.lat),
+        lon: Number(location.lon),
+        mode
+      };
+
+      const previous = trackPoints[trackPoints.length - 1];
+
+      // 同じ場所での細かすぎる記録を抑える
+      if (previous && previous.mode === point.mode) {
+        const distance = metersBetween(previous, point);
+        const elapsed =
+          new Date(point.time).getTime() -
+          new Date(previous.time).getTime();
+
+        if (distance < 15 && elapsed < 30000) return;
+      }
+
+      trackPoints.push(point);
+
+      // 保存データが大きくなりすぎないよう上限を設ける
+      if (trackPoints.length > 5000) {
+        trackPoints = trackPoints.slice(-5000);
+      }
+    }
+
+    function metersBetween(a, b) {
+      const rad = degrees => degrees * Math.PI / 180;
+      const dLat = rad(b.lat - a.lat);
+      const dLon = rad(b.lon - a.lon);
+      const lat1 = rad(a.lat);
+      const lat2 = rad(b.lat);
+
+      const x = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) *
+        Math.sin(dLon / 2) ** 2;
+
+      return 6371000 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    }
+
+    function startTracking() {
+      if (!shiftActive || watchId !== null) return;
+      if (!navigator.geolocation) return;
+
+      watchId = navigator.geolocation.watchPosition(
+        position => {
+          const location = {
+            time: new Date(position.timestamp).toISOString(),
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          };
+
+          addTrackPoint(location);
+          save("taxiTrackPoints", trackPoints);
+          renderMap();
+        },
+        error => {
+          console.warn("GPS走行記録エラー:", error.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+      );
+    }
+
+    function stopTracking() {
+      if (watchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+    }
+
+    // --------------------------------------------------
+    // 出庫・帰庫
+    // --------------------------------------------------
+
+    async function recordDepot(action) {
+      if (action === "out" && shiftActive) {
+        alert("すでに出庫中です。");
+        return;
+      }
+
+      if (action === "back" && !shiftActive) {
+        alert("まだ出庫していません。");
+        return;
+      }
+
+      try {
+        const location = await getLocation();
+
+        if (action === "out") {
+          shiftActive = true;
+          events.push({
+            type: "depot",
+            label: "出庫",
+            location
+          });
+
+          addTrackPoint(location);
+          saveAll();
+          refresh();
+          startTracking();
+        } else {
+          events.push({
+            type: "depot",
+            label: "帰庫",
+            location
+          });
+
+          addTrackPoint(location);
+          shiftActive = false;
+          saveAll();
+          stopTracking();
+          refresh();
+        }
+      } catch (error) {
+        notifyError(error);
+      }
+    }
+
+    // --------------------------------------------------
+    // 乗車・降車
+    // --------------------------------------------------
+
+    async function recordPickup() {
+      if (currentRide) {
+        alert("すでに乗車記録があります。先に降車を記録してください。");
+        return;
+      }
+
+      try {
+        const location = await getLocation();
+
+        currentRide = {
+          pickup: location,
+          dropoff: null,
+          fare: 0
+        };
+
+        mode = "occupied";
+
+        // 通知ボタンで設定したサービスを選択欄に反映
+        document.getElementById("service").value = pendingService || "";
+
+        events.push({
+          type: "mode",
+          label: "乗車・賃走開始",
+          location,
+          mode: "occupied"
+        });
+
+        addTrackPoint(location);
+        saveAll();
+        refresh();
+      } catch (error) {
+        notifyError(error);
+      }
+    }
+
+    async function recordDropoff() {
       if (!currentRide) {
-        document.getElementById("message").textContent =
-          "先に乗車ボタンを押してね。";
+        alert("先に乗車を記録してください。");
         return;
       }
 
@@ -193,250 +725,204 @@
       const fare = Number(fareText);
 
       if (fareText === "" || !Number.isFinite(fare) || fare < 0) {
-        document.getElementById("message").textContent =
-          "降車前に正しい運賃を入力してね。";
+        alert("運賃を正しく入力してください。");
+        fareInput.focus();
         return;
       }
 
-      getLocation(function(location) {
+      const selectedService = document.getElementById("service").value;
+      const service = selectedService || pendingService || "未設定";
+
+      try {
+        const location = await getLocation();
+
         currentRide.dropoff = location;
         currentRide.fare = fare;
+        currentRide.service = service;
 
         rides.unshift(currentRide);
         currentRide = null;
+        pendingService = "";
+        mode = "empty";
 
-        saveCurrentRide();
-        saveRides();
+        events.push({
+          type: "mode",
+          label: "降車・空車開始",
+          location,
+          mode: "empty"
+        });
+
+        addTrackPoint(location);
 
         fareInput.value = "";
+        document.getElementById("service").value = "";
 
-        document.getElementById("message").textContent =
-          "降車を記録したよ！ 履歴に保存したよ。";
-
-        renderHistory();
-      });
-    }
-
-
-let map;
-let mapMarkers = [];
-
-function initializeMap() {
-  map = L.map("map").setView([35.1709, 136.8815], 11);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors"
-  }).addTo(map);
-}
-
-function renderMapMarkers() {
-  if (!map) return;
-
-  mapMarkers.forEach(function(marker) {
-    map.removeLayer(marker);
-  });
-  mapMarkers = [];
-  
-  const redIcon = new L.Icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-    shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-  });
-
-  const points = [];
-
-  rides.forEach(function(ride) {
-    if (ride.pickup) {
-      points.push({
-        location: ride.pickup,
-        label: "乗車地点",
-        color: "blue"
-      });
-    }
-
-    if (ride.dropoff) {
-      points.push({
-        location: ride.dropoff,
-        label: "降車地点",
-        color: "red"
-      });
-    }
-  });
-
-  if (currentRide && currentRide.pickup) {
-    points.push({
-      location: currentRide.pickup,
-      label: "乗車中の乗車地点",
-      color: "blue"
-    });
-  }
-
-  points.forEach(function(point) {
-    const location = point.location;
-
-    if (
-      typeof location.lat !== "number" ||
-      typeof location.lon !== "number"
-    ) {
-      return;
-    }
-
-        
-    const ride = rides.find(function(ride) {
-      return ride.pickup === point.location ||
-             ride.dropoff === point.location;
-    });
-
-    const details = [
-      point.label,
-      "日時：" + formatTime(location.time),
-      ride ? "運賃：" + formatYen(ride.fare) : ""
-    ].filter(Boolean).join("<br>");
-
-    const marker = L.marker(
-      [location.lat, location.lon],
-      {
-        icon: point.color === "red" ? redIcon : new L.Icon.Default()
+        saveAll();
+        refresh();
+      } catch (error) {
+        notifyError(error);
       }
-    )
-      .addTo(map)
-      .bindPopup(details);
-
-    mapMarkers.push(marker);
-  });
-
-  if (points.length > 0) {
-    const validPoints = points
-      .filter(function(point) {
-        return typeof point.location.lat === "number" &&
-               typeof point.location.lon === "number";
-      })
-      .map(function(point) {
-        return [point.location.lat, point.location.lon];
-      });
-
-    if (validPoints.length > 0) {
-      map.fitBounds(validPoints, { padding: [25, 25], maxZoom: 15 });
     }
-  }
-}
 
-    function renderHistory() {
-      const dailyTotals = {};
+    // --------------------------------------------------
+    // Uber・GOなどの注文通知
+    // --------------------------------------------------
 
-      rides.forEach(function(ride) {
-        if (!ride.dropoff || !ride.dropoff.time) return;
+    async function recordPing(service) {
+      try {
+        const location = await getLocation();
 
-        const date = formatDate(ride.dropoff.time);
-        dailyTotals[date] =
-          (dailyTotals[date] || 0) + (Number(ride.fare) || 0);
-      });
+        events.push({
+          type: "ping",
+          service,
+          label: service + " 注文通知",
+          location
+        });
 
-      const dailySales = document.getElementById("dailySales");
-      dailySales.innerHTML = "";
+        pendingService = service;
+        document.getElementById("service").value = service;
 
-      Object.keys(dailyTotals).forEach(function(date) {
-        const item = document.createElement("div");
-        item.className = "record";
-        item.textContent = date + "：" + formatYen(dailyTotals[date]);
-        dailySales.appendChild(item);
-      });
+        saveAll();
+        refresh();
 
-      if (Object.keys(dailyTotals).length === 0) {
-        dailySales.textContent = "まだ売上記録はありません。";
+        alert(service + "の通知位置を記録しました。");
+      } catch (error) {
+        notifyError(error);
       }
+    }
 
-      const today = formatDate(new Date());
+    // --------------------------------------------------
+    // 売上集計・履歴表示
+    // --------------------------------------------------
 
-      const todayTotal = rides.reduce(function(total, ride) {
-        if (!ride.dropoff || !ride.dropoff.time) return total;
+    function renderSales() {
+      const todayRides = rides.filter(ride =>
+        ride.dropoff && isToday(ride.dropoff.time)
+      );
 
-        if (formatDate(ride.dropoff.time) === today) {
-          return total + (Number(ride.fare) || 0);
-        }
-        return total;
-      }, 0);
+      const sales = todayRides.reduce(
+        (sum, ride) => sum + (Number(ride.fare) || 0), 0
+      );
 
-      const totalSales = rides.reduce(function(total, ride) {
-        return total + (Number(ride.fare) || 0);
-      }, 0);
-
-      document.getElementById("todaySales").textContent =
-        formatYen(todayTotal);
-
-           // 今日の営業回数を数える
-      const todayCount = rides.filter(function(ride) {
-        if (!ride.dropoff || !ride.dropoff.time) return false;
-        return formatDate(ride.dropoff.time) === today;
-      }).length;
-
-      // 今日の平均単価を計算する
-      const todayAverage = todayCount > 0
-        ? todayTotal / todayCount
-        : 0;
-
-      // 画面に表示する
+      document.getElementById("todaySales").textContent = yen(sales);
       document.getElementById("todayCount").textContent =
-        todayCount + "回";
+        todayRides.length + "件";
 
       document.getElementById("todayAverage").textContent =
-        formatYen(Math.round(todayAverage));
+        yen(todayRides.length ? sales / todayRides.length : 0);
 
-      document.getElementById("totalSales").textContent =
-        formatYen(totalSales);
+      document.getElementById("totalCount").textContent =
+        rides.length + (currentRide ? 1 : 0) + "件";
 
-      const history = document.getElementById("history");
-      history.innerHTML = "";
+      const services = ["Uber", "GO", "流し・付け待ち", "その他", "未設定"];
+      const stats = document.getElementById("serviceStats");
+      stats.replaceChildren();
 
-      if (currentRide) {
-        const current = document.createElement("div");
-        current.className = "record";
+      services.forEach(service => {
+        const list = todayRides.filter(ride =>
+          (ride.service || "未設定") === service
+        );
 
-        current.innerHTML =
-          "<strong>乗車中（記録待ち）</strong><br>" +
-          "乗車時刻：" + formatTime(currentRide.pickup.time) +
-          "<p class='small'>乗車地点：" +
-          currentRide.pickup.lat + ", " + currentRide.pickup.lon +
-          "</p>";
+        const total = list.reduce(
+          (sum, ride) => sum + (Number(ride.fare) || 0), 0
+        );
 
-        history.appendChild(current);
-      }
+        const row = document.createElement("div");
+        row.className = "ride";
 
-      if (rides.length === 0 && !currentRide) {
-        history.textContent = "まだ履歴はありません。";
+        const title = document.createElement("strong");
+        title.textContent = service;
+
+        const detail = document.createElement("div");
+        detail.textContent =
+          "売上 " + yen(total) +
+          " ／ " + list.length + "件" +
+          " ／ 平均 " + yen(list.length ? total / list.length : 0);
+
+        row.append(title, detail);
+        stats.appendChild(row);
+      });
+    }
+
+    function renderHistory() {
+      const container = document.getElementById("history");
+      container.replaceChildren();
+
+      if (!rides.length) {
+        container.textContent = "まだ乗降履歴がありません。";
         return;
       }
 
-      rides.forEach(function(ride, index) {
-        if (!ride.pickup || !ride.dropoff) return;
+      rides.forEach(ride => {
+        const row = document.createElement("div");
+        row.className = "ride";
 
-        const item = document.createElement("div");
-        item.className = "record";
+        const title = document.createElement("strong");
+        title.textContent =
+          formatTime(ride.pickup?.time) + " → " +
+          formatTime(ride.dropoff?.time);
 
-        const pickup = ride.pickup;
-        const dropoff = ride.dropoff;
+        const detail = document.createElement("div");
+        detail.textContent =
+          "サービス：" + (ride.service || "未設定") +
+          " ／ 運賃：" + yen(ride.fare);
 
-        item.innerHTML =
-          "<strong>記録 " + (rides.length - index) + "</strong><br>" +
-          "乗車時刻：" + formatTime(pickup.time) + "<br>" +
-          "降車時刻：" + formatTime(dropoff.time) + "<br>" +
-          "運賃：" + formatYen(ride.fare) +
-          "<p class='small'>乗車地点：" +
-          pickup.lat + ", " + pickup.lon + "</p>" +
-          "<p class='small'>降車地点：" +
-          dropoff.lat + ", " + dropoff.lon + "</p>";
+        const location = document.createElement("div");
+        location.className = "hint";
 
-        history.appendChild(item);
+        location.textContent =
+          validLocation(ride.pickup) && validLocation(ride.dropoff)
+            ? "乗車・降車位置を地図に表示中"
+            : "位置情報のない記録が含まれています";
+
+        row.append(title, detail, location);
+        container.appendChild(row);
       });
     }
 
-    loadCurrentRide();
+    function renderEventHistory() {
+      const container = document.getElementById("eventHistory");
+      container.replaceChildren();
+
+      const recent = events.slice(-30).reverse();
+
+      if (!recent.length) {
+        container.textContent = "まだイベント記録がありません。";
+        return;
+      }
+
+      recent.forEach(event => {
+        const row = document.createElement("div");
+        row.className = "ride";
+
+        row.textContent =
+          formatTime(event.location?.time) + " ／ " +
+          (event.label || event.type) +
+          (event.service ? "（" + event.service + "）" : "");
+
+        container.appendChild(row);
+      });
+    }
+
+    function refresh() {
+      updateStatus();
+      renderSales();
+      renderHistory();
+      renderEventHistory();
+      renderMap();
+    }
+
+    // --------------------------------------------------
+    // 起動
+    // --------------------------------------------------
+
     initializeMap();
-    renderHistory();
-    renderMapMarkers();
+    refresh();
+
+    // ページを開き直した場合、出庫中ならGPS記録を再開
+    if (shiftActive) {
+      startTracking();
+    }
   </script>
 </body>
 </html>
