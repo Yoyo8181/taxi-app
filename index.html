@@ -284,16 +284,26 @@ function renderMapMarkers() {
       return;
     }
 
-        const marker = L.marker(
+        
+    const ride = rides.find(function(ride) {
+      return ride.pickup === point.location ||
+             ride.dropoff === point.location;
+    });
+
+    const details = [
+      point.label,
+      "日時：" + formatTime(location.time),
+      ride ? "運賃：" + formatYen(ride.fare) : ""
+    ].filter(Boolean).join("<br>");
+
+    const marker = L.marker(
       [location.lat, location.lon],
       {
         icon: point.color === "red" ? redIcon : new L.Icon.Default()
       }
     )
       .addTo(map)
-      .bindPopup(
-        point.label + "<br>" + formatTime(location.time)
-      );
+      .bindPopup(details);
 
     mapMarkers.push(marker);
   });
