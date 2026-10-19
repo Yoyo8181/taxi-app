@@ -156,6 +156,41 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
 <main>
 
   <section class="card">
+    <h2>🔔 Uber・GO 配車記録</h2>
+    <p class="hint">
+      配車通知が来たら対応するボタンを押してください。
+      通知を記録した日時・GPS位置・その時の営業状態を保存します。
+    </p>
+
+    <div class="grid">
+      <button type="button"
+        style="background:#202020;min-height:70px;font-size:18px"
+        onclick="recordDispatch('Uber')">
+        🔔 Uber
+      </button>
+      <button type="button"
+        style="background:#1769aa;min-height:70px;font-size:18px"
+        onclick="recordDispatch('GO')">
+        🔔 GO
+      </button>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="metric">
+        <div class="caption">本日の配車通知</div>
+        <div class="value" id="dispatchTodayCount">0</div>
+      </div>
+      <div class="metric">
+        <div class="caption">本日の受注</div>
+        <div class="value" id="dispatchTodayAccepted">0</div>
+      </div>
+    </div>
+
+    <h3>配車履歴</h3>
+    <div id="dispatchHistory"></div>
+  </section>
+
+  <section class="card">
     <h2>📊 今月の売上</h2>
     <div class="grid">
       <div class="metric">
@@ -415,6 +450,7 @@ const rides = readStorage("taxiRides", []);
 const customers = readStorage("taxiCustomers", []);
 const reservations = readStorage("taxiReservations", []);
 const events = readStorage("taxiEvents", []);
+const dispatches = readStrage("taxiDispatches",[]);
 let trackPoints = readStorage("taxiTrackPoints", []);
 let currentRide = readStorage("taxiCurrentRide", null);
 
@@ -502,6 +538,137 @@ function addEvent(type, position = null, extra = {}) {
   });
   save("taxiEvents", events);
   renderMap();
+}
+
+function saveDispatches() {
+  return save("taxiDispatches", dispatches);
+}
+
+async function recordDispatch(app) {
+  // GPS取得に時間がかかっても、押した時刻は先に記録する
+  const pressedAt = new Date().toISOString();
+
+  const dispatch = {
+    id: crypto.randomUUID(),
+    app,
+    time: pressedAt,
+    lat: lastPosition?.lat ?? null,
+    lon: lastPosition?.lon ?? null,
+    locationStatus: "未取得",
+    mode: currentRide ? "乗車中" :
+      (mode === "empty" ? "空車" : "実車"),
+    rideId: currentRide?.id ?? null,
+    result: "未確認"
+  };
+
+  // まず日時だけでも保存する
+  dispatches.push(dispatch);
+
+  if (!saveDispatches()) {
+    dispatches.pop();
+    return;
+  }
+
+  renderDispatchHistory();
+
+  // GPSは後から取得し、同じ配車記録に追加する
+  try {
+    const position = await getLocation();
+    dispatch.lat = position.lat;
+    dispatch.lon = position.lon;
+    dispatch.locationStatus = "取得済み";
+
+    lastPosition = position;
+    renderStatus();
+  } catch (error) {
+    dispatch.locationStatus = "取得できず";
+  }
+
+  saveDispatches();
+  renderDispatchHistory();
+  renderMap();
+
+  alert(
+    app + "の配車通知を記録しました。\n" +
+    "記録時刻：" + localDateTime(dispatch.time) + "\n" +
+    "位置情報：" + dispatch.locationStatus + "\n" +
+    "営業状態：" + dispatch.mode
+  );
+}
+
+function setDispatchResult(id, result) {
+  const dispatch = dispatches.find(d => d.id === id);
+  if (!dispatch) return;
+
+  dispatch.result = result;
+  saveDispatches();
+  renderDispatchHistory();
+}
+
+function renderDispatchHistory() {
+  const list = document.getElementById("dispatchHistory");
+  if (!list) return;
+
+  list.replaceChildren();
+
+  const today = new Date().toLocaleDateString("ja-JP");
+
+  const todayDispatches = dispatches.filter(d =>
+    new Date(d.time).toLocaleDateString("ja-JP") === today
+  );
+
+  document.getElementById("dispatchTodayCount").textContent =
+    todayDispatches.length;
+
+  document.getElementById("dispatchTodayAccepted").textContent =
+    todayDispatches.filter(d => d.result === "受注").length;
+
+  [...dispatches].reverse().slice(0, 100).forEach(d => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+
+    const title = document.createElement("strong");
+    title.textContent = d.app + " ／ " + localDateTime(d.time);
+
+    const detail = document.createElement("p");
+    detail.className = "muted";
+    detail.textContent =
+      "状態：" + d.mode +
+      " ／ 結果：" + d.result +
+      "\n位置：" +
+      (d.lat != null && d.lon != null
+        ? d.lat.toFixed(5) + ", " + d.lon.toFixed(5)
+        : d.locationStatus) +
+      (d.rideId ? "\n乗車記録ID：" + d.rideId : "");
+
+    const resultLabel = document.createElement("label");
+    resultLabel.textContent = "受注結果";
+
+    const resultSelect = document.createElement("select");
+    [
+      ["未確認", "未確認"],
+      ["受注", "受注"],
+      ["未受注", "取れなかった"],
+      ["見送り", "見送り"],
+      ["キャンセル", "キャンセル"]
+    ].forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      resultSelect.appendChild(option);
+    });
+
+    resultSelect.value = d.result;
+    resultSelect.onchange = () =>
+      setDispatchResult(d.id, resultSelect.value);
+
+    row.append(title, detail, resultLabel, resultSelect);
+    list.appendChild(row);
+  });
+
+  if (!dispatches.length) {
+    list.textContent = "配車記録はまだありません。";
+  }
 }
 
 // ========================================
@@ -1186,6 +1353,7 @@ function exportData() {
     taxiCustomers:customers,
     taxiReservations:reservations,
     taxiEvents:events,
+    taxiDispatches:dispatches,
     taxiTrackPoints:trackPoints,
     taxiMode:mode,
     taxiShiftActive:shiftActive,
@@ -1226,7 +1394,7 @@ function importData(event) {
 
       const keys = [
         "taxiRides","taxiCurrentRide","taxiCustomers","taxiReservations",
-        "taxiEvents","taxiTrackPoints","taxiMode","taxiShiftActive",
+        "taxiEvents","taxiDispatches","taxiTrackPoints","taxiMode","taxiShiftActive",
         "taxiPaySettings","taxiMapView"
       ];
 
@@ -1269,6 +1437,7 @@ renderStatus();
 renderHistory();
 renderCustomers();
 renderReservations();
+renderDispatchHistory();
 initMap();
 startReservationAlerts();
 
