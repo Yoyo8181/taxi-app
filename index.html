@@ -910,7 +910,7 @@ function initMap() {
   map.on("moveend", () => {
     if (!mapReady) return;
     save("taxiMapView", {
-      center:map.getCenter().toArray(),
+      center:[map.getCenter().lat, map.getCenter().lng],
       zoom:map.getZoom()
     });
   });
@@ -937,31 +937,120 @@ function initMap() {
     }
   });
 
+function initMap() {
+  map = L.map("map").setView(MAP_HOME, MAP_HOME_ZOOM);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19,
+    attribution:"&copy; OpenStreetMap contributors"
+  }).addTo(map);
+
+  markerLayer = L.layerGroup().addTo(map);
+  routeLayer = L.layerGroup().addTo(map);
+
+  const savedView = readStorage("taxiMapView", null);
+  if (savedView && Array.isArray(savedView.center) &&
+      Number.isFinite(savedView.zoom)) {
+    map.setView(savedView.center, savedView.zoom);
+    firstMapRender = false;
+  }
+
+  map.on("moveend", () => {
+    if (!mapReady) return;
+    save("taxiMapView", {
+      center:map.getCenter().toArray(),
+      zoom:map.getZoom()
+    });
+  });
+
+  mapReady = true;
+  renderMap();
+}
+
 function renderMap() {
- 
+  if (!mapReady || !map || !markerLayer || !routeLayer) return;
+
+  markerLayer.clearLayers();
+  routeLayer.clearLayers();
+
+  const points = [];
+
+  rides.forEach(r => {
+    if (Number.isFinite(r.pickup?.lat) &&
+        Number.isFinite(r.pickup?.lon)) {
+      const ll = [r.pickup.lat, r.pickup.lon];
+      points.push(ll);
+      L.circleMarker(ll, {
+        radius:7,
+        color:"#176b52",
+        fillColor:"#27a56f",
+        fillOpacity:0.9
+      }).bindPopup("乗車<br>" +
+        localDateTime(r.pickup.time)).addTo(markerLayer);
+    }
+
+    if (Number.isFinite(r.dropoff?.lat) &&
+        Number.isFinite(r.dropoff?.lon)) {
+      const ll = [r.dropoff.lat, r.dropoff.lon];
+      points.push(ll);
+      L.circleMarker(ll, {
+        radius:7,
+        color:"#a52b32",
+        fillColor:"#e04b50",
+        fillOpacity:0.9
+      }).bindPopup("降車<br>" +
+        localDateTime(r.dropoff.time)).addTo(markerLayer);
+    }
+  });
+
+  if (currentRide?.pickup &&
+      Number.isFinite(currentRide.pickup.lat) &&
+      Number.isFinite(currentRide.pickup.lon)) {
+    const ll = [currentRide.pickup.lat, currentRide.pickup.lon];
+    points.push(ll);
+    L.circleMarker(ll, {
+      radius:8,
+      color:"#176b52",
+      fillColor:"#27a56f",
+      fillOpacity:1
+    }).bindPopup("乗車中<br>" +
+      localDateTime(currentRide.pickup.time)).addTo(markerLayer);
+  }
+
   const trackCoords = trackPoints
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon))
-    .map(p => [p.lat,p.lon]);
+    .map(p => [p.lat, p.lon]);
 
   if (trackCoords.length) {
     trackCoords.forEach(p => points.push(p));
     L.polyline(trackCoords, {
-      color:"#2674d9",weight:4,opacity:.8
+      color:"#2674d9",
+      weight:4,
+      opacity:0.8
     }).addTo(routeLayer);
   }
 
   events.forEach(event => {
-    if (event.lat == null || event.lon == null) return;
-    const ll = [event.lat,event.lon];
+    if (!Number.isFinite(event.lat) ||
+        !Number.isFinite(event.lon)) return;
+
+    const ll = [event.lat, event.lon];
     points.push(ll);
+
     L.circleMarker(ll, {
-      radius:4,color:"#656d73",fillColor:"#a2a8ad",fillOpacity:.8
+      radius:4,
+      color:"#656d73",
+      fillColor:"#a2a8ad",
+      fillOpacity:0.8
     }).bindPopup(escapeHtml(event.type) + "<br>" +
       localDateTime(event.time)).addTo(markerLayer);
   });
 
   if (firstMapRender && points.length) {
-    map.fitBounds(points, {padding:[20,20],maxZoom:15});
+    map.fitBounds(points, {
+      padding:[20,20],
+      maxZoom:15
+    });
     firstMapRender = false;
   }
 }
