@@ -987,7 +987,7 @@ function initMap() {
     if (!mapReady) return;
 
     save("taxiMapView", {
-      center: map.getCenter().toArray(),
+      center: [map.getCenter().lat, map.getCenter().lng],
       zoom: map.getZoom()
     });
   });
