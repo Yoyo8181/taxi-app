@@ -262,6 +262,7 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
     <div class="buttons">
       <button id="shiftButton" onclick="toggleShift()">営業記録を開始</button>
       <button class="secondary" onclick="toggleMode()">空車／実車を切替</button>
+      <button class="secondary" onclick="testGPS()">📍 GPS確認</button>
     </div>
 
     <div class="grid">
@@ -525,6 +526,49 @@ function getLocation() {
       { enableHighAccuracy:true, timeout:15000, maximumAge:5000 }
     );
   });
+}
+let gpsTestMarker = null;
+
+async function testGPS() {
+  try {
+    const position = await getLocation();
+
+    lastPosition = position;
+    renderStatus();
+
+    alert(
+      "GPS取得成功！\n" +
+      "緯度：" + position.lat + "\n" +
+      "経度：" + position.lon + "\n" +
+      "誤差：約" + Math.round(position.accuracy) + "m"
+    );
+
+    if (mapReady && map) {
+      if (gpsTestMarker) {
+        map.removeLayer(gpsTestMarker);
+      }
+
+      gpsTestMarker = L.marker([
+        position.lat,
+        position.lon
+      ]).addTo(map);
+
+      gpsTestMarker.bindPopup("GPS確認地点").openPopup();
+      map.setView([position.lat, position.lon], 16);
+    }
+  } catch (error) {
+    let message = "GPSを取得できませんでした。";
+
+    if (error.code === 1) {
+      message += "\n位置情報の許可を確認してね。";
+    } else if (error.code === 2) {
+      message += "\n現在地を特定できません。";
+    } else if (error.code === 3) {
+      message += "\nGPS取得がタイムアウトしました。";
+    }
+
+    alert(message);
+  }
 }
 
 function addEvent(type, position = null, extra = {}) {
