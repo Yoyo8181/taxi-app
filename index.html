@@ -890,199 +890,299 @@ function mapDistance(lat1, lon1, lat2, lon2) {
 // ========================================
 
 function initMap() {
-  map = L.map("map").setView(MAP_HOME, MAP_HOME_ZOOM);
+  // Leafletが読み込まれているか確認
+  if (typeof L === "undefined") {
+    console.error("地図ライブラリLeafletを読み込めませんでした。");
+    return;
+  }
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom:19,
-    attribution:"&copy; OpenStreetMap contributors"
-  }).addTo(map);
+  // 地図を表示するHTML要素があるか確認
+  const mapElement = document.getElementById("map");
 
+  if (!mapElement) {
+    console.error("地図表示用の要素 #map が見つかりません。");
+    return;
+  }
+
+  // 二重初期化を防止
+  if (map) return;
+
+  // 地図を作成
+  map = L.map(mapElement).setView(
+    MAP_HOME,
+    MAP_HOME_ZOOM
+  );
+
+  // OpenStreetMapの地図画像を読み込む
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }
+  ).addTo(map);
+
+  // マーカーと走行ルートの表示レイヤー
   markerLayer = L.layerGroup().addTo(map);
   routeLayer = L.layerGroup().addTo(map);
 
+  // 前回の地図位置を復元
   const savedView = readStorage("taxiMapView", null);
-  if (savedView && Array.isArray(savedView.center) &&
-      Number.isFinite(savedView.zoom)) {
+
+  if (
+    savedView &&
+    Array.isArray(savedView.center) &&
+    Number.isFinite(savedView.zoom)
+  ) {
     map.setView(savedView.center, savedView.zoom);
     firstMapRender = false;
   }
 
+  // 地図の移動・拡大縮小後に位置を保存
   map.on("moveend", () => {
     if (!mapReady) return;
+
     save("taxiMapView", {
-      center:[map.getCenter().lat, map.getCenter().lng],
-      zoom:map.getZoom()
+      center: map.getCenter().toArray(),
+      zoom: map.getZoom()
     });
   });
 
   mapReady = true;
+
+  // 保存されている乗降地点などを地図に表示
   renderMap();
+
+  // スマホで地図のサイズが正しく認識されるよう再計算
+  setTimeout(() => {
+    if (map) {
+      map.invalidateSize();
+    }
+  }, 200);
 }
 
-  rides.forEach(r => {
-    if (r.pickup?.lat != null && r.pickup?.lon != null) {
-      const ll = [r.pickup.lat, r.pickup.lon];
-      points.push(ll);
-      L.marker(ll)
-        .bindPopup("乗車<br>" + localDateTime(r.pickup.time))
-        .addTo(markerLayer);
-    }
-
-    if (r.dropoff?.lat != null && r.dropoff?.lon != null) {
-      const ll = [r.dropoff.lat, r.dropoff.lon];
-      points.push(ll);
-      L.marker(ll)
-        .bindPopup("降車<br>" + localDateTime(r.dropoff.time))
-        .addTo(markerLayer);
-    }
-  });
-
-function initMap() {
-  map = L.map("map").setView(MAP_HOME, MAP_HOME_ZOOM);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom:19,
-    attribution:"&copy; OpenStreetMap contributors"
-  }).addTo(map);
-
-  markerLayer = L.layerGroup().addTo(map);
-  routeLayer = L.layerGroup().addTo(map);
-
-  const savedView = readStorage("taxiMapView", null);
-  if (savedView && Array.isArray(savedView.center) &&
-      Number.isFinite(savedView.zoom)) {
-    map.setView(savedView.center, savedView.zoom);
-    firstMapRender = false;
-  }
-
-  map.on("moveend", () => {
-    if (!mapReady) return;
-    save("taxiMapView", {
-      center:map.getCenter().toArray(),
-      zoom:map.getZoom()
-    });
-  });
-
-  mapReady = true;
-  renderMap();
-}
 
 function renderMap() {
-  if (!mapReady || !map || !markerLayer || !routeLayer) return;
+  if (!mapReady || !map || !markerLayer || !routeLayer) {
+    return;
+  }
 
   markerLayer.clearLayers();
   routeLayer.clearLayers();
 
   const points = [];
 
+  // 乗車地点・降車地点を表示
   rides.forEach(r => {
-    if (Number.isFinite(r.pickup?.lat) &&
-        Number.isFinite(r.pickup?.lon)) {
+    if (
+      Number.isFinite(r.pickup?.lat) &&
+      Number.isFinite(r.pickup?.lon)
+    ) {
       const ll = [r.pickup.lat, r.pickup.lon];
+
       points.push(ll);
+
       L.circleMarker(ll, {
-        radius:7,
-        color:"#176b52",
-        fillColor:"#27a56f",
-        fillOpacity:0.9
-      }).bindPopup("乗車<br>" +
-        localDateTime(r.pickup.time)).addTo(markerLayer);
+        radius: 7,
+        color: "#176b52",
+        fillColor: "#27a56f",
+        fillOpacity: 0.9
+      })
+        .bindPopup(
+          "乗車<br>" + localDateTime(r.pickup.time)
+        )
+        .addTo(markerLayer);
     }
 
-    if (Number.isFinite(r.dropoff?.lat) &&
-        Number.isFinite(r.dropoff?.lon)) {
+    if (
+      Number.isFinite(r.dropoff?.lat) &&
+      Number.isFinite(r.dropoff?.lon)
+    ) {
       const ll = [r.dropoff.lat, r.dropoff.lon];
+
       points.push(ll);
+
       L.circleMarker(ll, {
-        radius:7,
-        color:"#a52b32",
-        fillColor:"#e04b50",
-        fillOpacity:0.9
-      }).bindPopup("降車<br>" +
-        localDateTime(r.dropoff.time)).addTo(markerLayer);
+        radius: 7,
+        color: "#a52b32",
+        fillColor: "#e04b50",
+        fillOpacity: 0.9
+      })
+        .bindPopup(
+          "降車<br>" + localDateTime(r.dropoff.time)
+        )
+        .addTo(markerLayer);
     }
   });
 
-  if (currentRide?.pickup &&
-      Number.isFinite(currentRide.pickup.lat) &&
-      Number.isFinite(currentRide.pickup.lon)) {
-    const ll = [currentRide.pickup.lat, currentRide.pickup.lon];
+  // 現在乗車中の地点を表示
+  if (
+    currentRide?.pickup &&
+    Number.isFinite(currentRide.pickup.lat) &&
+    Number.isFinite(currentRide.pickup.lon)
+  ) {
+    const ll = [
+      currentRide.pickup.lat,
+      currentRide.pickup.lon
+    ];
+
     points.push(ll);
+
     L.circleMarker(ll, {
-      radius:8,
-      color:"#176b52",
-      fillColor:"#27a56f",
-      fillOpacity:1
-    }).bindPopup("乗車中<br>" +
-      localDateTime(currentRide.pickup.time)).addTo(markerLayer);
+      radius: 8,
+      color: "#176b52",
+      fillColor: "#27a56f",
+      fillOpacity: 1
+    })
+      .bindPopup(
+        "乗車中<br>" +
+        localDateTime(currentRide.pickup.time)
+      )
+      .addTo(markerLayer);
   }
 
+  // GPSで記録した走行ルートを表示
   const trackCoords = trackPoints
-    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+    .filter(p =>
+      Number.isFinite(p.lat) &&
+      Number.isFinite(p.lon)
+    )
     .map(p => [p.lat, p.lon]);
 
-  if (trackCoords.length) {
+  if (trackCoords.length > 0) {
     trackCoords.forEach(p => points.push(p));
+
     L.polyline(trackCoords, {
-      color:"#2674d9",
-      weight:4,
-      opacity:0.8
+      color: "#2674d9",
+      weight: 4,
+      opacity: 0.8
     }).addTo(routeLayer);
   }
 
+  // その他の記録地点を表示
   events.forEach(event => {
-    if (!Number.isFinite(event.lat) ||
-        !Number.isFinite(event.lon)) return;
+    if (
+      !Number.isFinite(event.lat) ||
+      !Number.isFinite(event.lon)
+    ) {
+      return;
+    }
 
     const ll = [event.lat, event.lon];
+
     points.push(ll);
 
     L.circleMarker(ll, {
-      radius:4,
-      color:"#656d73",
-      fillColor:"#a2a8ad",
-      fillOpacity:0.8
-    }).bindPopup(escapeHtml(event.type) + "<br>" +
-      localDateTime(event.time)).addTo(markerLayer);
+      radius: 4,
+      color: "#656d73",
+      fillColor: "#a2a8ad",
+      fillOpacity: 0.8
+    })
+      .bindPopup(
+        escapeHtml(event.type) +
+        "<br>" +
+        localDateTime(event.time)
+      )
+      .addTo(markerLayer);
   });
 
-  if (firstMapRender && points.length) {
+  // 初回表示時は記録地点が見える範囲に調整
+  if (firstMapRender && points.length > 0) {
     map.fitBounds(points, {
-      padding:[20,20],
-      maxZoom:15
+      padding: [20, 20],
+      maxZoom: 15
     });
+
     firstMapRender = false;
   }
 }
 
+
+// 全地点を地図に表示
 function showAllPoints() {
+  if (!mapReady || !map) {
+    alert("地図を読み込めていません。");
+    return;
+  }
+
   const points = [];
+
   rides.forEach(r => {
-    if (r.pickup?.lat != null) points.push([r.pickup.lat,r.pickup.lon]);
-    if (r.dropoff?.lat != null) points.push([r.dropoff.lat,r.dropoff.lon]);
-  });
-  trackPoints.forEach(p => {
-    if (Number.isFinite(p.lat) && Number.isFinite(p.lon)) points.push([p.lat,p.lon]);
-  });
-  events.forEach(e => {
-    if (e.lat != null && e.lon != null) points.push([e.lat,e.lon]);
+    if (
+      Number.isFinite(r.pickup?.lat) &&
+      Number.isFinite(r.pickup?.lon)
+    ) {
+      points.push([r.pickup.lat, r.pickup.lon]);
+    }
+
+    if (
+      Number.isFinite(r.dropoff?.lat) &&
+      Number.isFinite(r.dropoff?.lon)
+    ) {
+      points.push([r.dropoff.lat, r.dropoff.lon]);
+    }
   });
 
-  if (points.length) map.fitBounds(points,{padding:[25,25],maxZoom:15});
-  else alert("表示できるGPS地点がありません。");
+  trackPoints.forEach(p => {
+    if (
+      Number.isFinite(p.lat) &&
+      Number.isFinite(p.lon)
+    ) {
+      points.push([p.lat, p.lon]);
+    }
+  });
+
+  events.forEach(e => {
+    if (
+      Number.isFinite(e.lat) &&
+      Number.isFinite(e.lon)
+    ) {
+      points.push([e.lat, e.lon]);
+    }
+  });
+
+  if (points.length > 0) {
+    map.fitBounds(points, {
+      padding: [25, 25],
+      maxZoom: 15
+    });
+  } else {
+    alert("表示できるGPS地点がありません。");
+  }
 }
 
+
+// 地図を初期位置に戻す
 function returnMapHome() {
+  if (!mapReady || !map) return;
+
   map.setView(MAP_HOME, MAP_HOME_ZOOM);
 }
 
+
+// 地図を拡大表示・通常表示に切り替える
 function toggleMapSize() {
-  document.getElementById("mapCard").classList.toggle("map-large");
-  setTimeout(() => map.invalidateSize(), 150);
+  const mapCard = document.getElementById("mapCard");
+
+  if (!mapCard || !mapReady || !map) return;
+
+  mapCard.classList.toggle("map-large");
+
+  setTimeout(() => {
+    if (map) {
+      map.invalidateSize();
+    }
+  }, 200);
 }
 
+
+// 交通情報を開く
 function openTraffic() {
-  window.open("https://www.jartic.or.jp/", "_blank", "noopener");
+  window.open(
+    "https://www.jartic.or.jp/",
+    "_blank",
+    "noopener"
+  );
 }
 
 // ========================================
