@@ -962,6 +962,29 @@ function initMap() {
 }
 
 
+// GPS座標を数値に変換して確認する
+function getMapCoords(item) {
+  if (!item) return null;
+
+  const lat = Number(item.lat);
+  const lon = Number(item.lon);
+
+  if (
+    item.lat === null || item.lat === undefined || item.lat === "" ||
+    item.lon === null || item.lon === undefined || item.lon === "" ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    lat < -90 || lat > 90 ||
+    lon < -180 || lon > 180
+  ) {
+    return null;
+  }
+
+  return [lat, lon];
+}
+
+
+// 地図を描画する
 function renderMap() {
   if (!mapReady || !map || !markerLayer || !routeLayer) {
     return;
@@ -972,107 +995,90 @@ function renderMap() {
 
   const points = [];
 
-  // 乗車地点・降車地点を表示
+  // 乗車・降車地点
   rides.forEach(r => {
-    if (
-      Number.isFinite(r.pickup?.lat) &&
-      Number.isFinite(r.pickup?.lon)
-    ) {
-      const ll = [r.pickup.lat, r.pickup.lon];
+    const pickup = getMapCoords(r.pickup);
+    const dropoff = getMapCoords(r.dropoff);
 
-      points.push(ll);
+    if (pickup) {
+      points.push(pickup);
 
-      L.circleMarker(ll, {
+      L.circleMarker(pickup, {
         radius: 7,
         color: "#176b52",
         fillColor: "#27a56f",
         fillOpacity: 0.9
       })
-        .bindPopup(
-          "乗車<br>" + localDateTime(r.pickup.time)
-        )
+        .bindPopup("乗車<br>" + localDateTime(r.pickup.time))
         .addTo(markerLayer);
     }
 
-    if (
-      Number.isFinite(r.dropoff?.lat) &&
-      Number.isFinite(r.dropoff?.lon)
-    ) {
-      const ll = [r.dropoff.lat, r.dropoff.lon];
+    if (dropoff) {
+      points.push(dropoff);
 
-      points.push(ll);
-
-      L.circleMarker(ll, {
+      L.circleMarker(dropoff, {
         radius: 7,
         color: "#a52b32",
         fillColor: "#e04b50",
         fillOpacity: 0.9
       })
-        .bindPopup(
-          "降車<br>" + localDateTime(r.dropoff.time)
-        )
+        .bindPopup("降車<br>" + localDateTime(r.dropoff.time))
         .addTo(markerLayer);
     }
   });
 
-  // 現在乗車中の地点を表示
-  if (
-    currentRide?.pickup &&
-    Number.isFinite(currentRide.pickup.lat) &&
-    Number.isFinite(currentRide.pickup.lon)
-  ) {
-    const ll = [
-      currentRide.pickup.lat,
-      currentRide.pickup.lon
-    ];
+  // 現在乗車中の地点
+  const currentPickup = getMapCoords(currentRide?.pickup);
 
-    points.push(ll);
+  if (currentPickup) {
+    points.push(currentPickup);
 
-    L.circleMarker(ll, {
+    L.circleMarker(currentPickup, {
       radius: 8,
       color: "#176b52",
       fillColor: "#27a56f",
       fillOpacity: 1
     })
       .bindPopup(
-        "乗車中<br>" +
-        localDateTime(currentRide.pickup.time)
+        "乗車中<br>" + localDateTime(currentRide.pickup.time)
       )
       .addTo(markerLayer);
   }
 
-  // GPSで記録した走行ルートを表示
+  // GPS走行ルート
   const trackCoords = trackPoints
-    .filter(p =>
-      Number.isFinite(p.lat) &&
-      Number.isFinite(p.lon)
-    )
-    .map(p => [p.lat, p.lon]);
+    .map(getMapCoords)
+    .filter(point => point !== null);
 
-  if (trackCoords.length > 0) {
-    trackCoords.forEach(p => points.push(p));
+  trackCoords.forEach(point => points.push(point));
 
+  if (trackCoords.length >= 2) {
     L.polyline(trackCoords, {
       color: "#2674d9",
       weight: 4,
-      opacity: 0.8
+      opacity: 0.85
     }).addTo(routeLayer);
   }
 
-  // その他の記録地点を表示
+  // GPS記録地点を青い線だけでなく点でも表示
+  trackCoords.forEach(point => {
+    L.circleMarker(point, {
+      radius: 3,
+      color: "#2674d9",
+      fillColor: "#2674d9",
+      fillOpacity: 1,
+      weight: 1
+    }).addTo(routeLayer);
+  });
+
+  // その他の記録地点
   events.forEach(event => {
-    if (
-      !Number.isFinite(event.lat) ||
-      !Number.isFinite(event.lon)
-    ) {
-      return;
-    }
+    const coords = getMapCoords(event);
+    if (!coords) return;
 
-    const ll = [event.lat, event.lon];
+    points.push(coords);
 
-    points.push(ll);
-
-    L.circleMarker(ll, {
+    L.circleMarker(coords, {
       radius: 4,
       color: "#656d73",
       fillColor: "#a2a8ad",
@@ -1080,20 +1086,30 @@ function renderMap() {
     })
       .bindPopup(
         escapeHtml(event.type) +
-        "<br>" +
-        localDateTime(event.time)
+        "<br>" + localDateTime(event.time)
       )
       .addTo(markerLayer);
   });
 
-  // 初回表示時は記録地点が見える範囲に調整
+  // 初回に記録地点が見える範囲へ移動
   if (firstMapRender && points.length > 0) {
+    showPointsOnMap(points);
+    firstMapRender = false;
+  }
+}
+
+
+// 指定した地点が見えるように地図を調整
+function showPointsOnMap(points) {
+  if (!map || points.length === 0) return;
+
+  if (points.length === 1) {
+    map.setView(points[0], 15);
+  } else {
     map.fitBounds(points, {
-      padding: [20, 20],
+      padding: [25, 25],
       maxZoom: 15
     });
-
-    firstMapRender = false;
   }
 }
 
@@ -1108,49 +1124,35 @@ function showAllPoints() {
   const points = [];
 
   rides.forEach(r => {
-    if (
-      Number.isFinite(r.pickup?.lat) &&
-      Number.isFinite(r.pickup?.lon)
-    ) {
-      points.push([r.pickup.lat, r.pickup.lon]);
-    }
+    const pickup = getMapCoords(r.pickup);
+    const dropoff = getMapCoords(r.dropoff);
 
-    if (
-      Number.isFinite(r.dropoff?.lat) &&
-      Number.isFinite(r.dropoff?.lon)
-    ) {
-      points.push([r.dropoff.lat, r.dropoff.lon]);
-    }
+    if (pickup) points.push(pickup);
+    if (dropoff) points.push(dropoff);
   });
 
+  const currentPickup = getMapCoords(currentRide?.pickup);
+  if (currentPickup) points.push(currentPickup);
+
   trackPoints.forEach(p => {
-    if (
-      Number.isFinite(p.lat) &&
-      Number.isFinite(p.lon)
-    ) {
-      points.push([p.lat, p.lon]);
-    }
+    const coords = getMapCoords(p);
+    if (coords) points.push(coords);
   });
 
   events.forEach(e => {
-    if (
-      Number.isFinite(e.lat) &&
-      Number.isFinite(e.lon)
-    ) {
-      points.push([e.lat, e.lon]);
-    }
+    const coords = getMapCoords(e);
+    if (coords) points.push(coords);
   });
 
   if (points.length > 0) {
-    map.fitBounds(points, {
-      padding: [25, 25],
-      maxZoom: 15
-    });
+    showPointsOnMap(points);
   } else {
-    alert("表示できるGPS地点がありません。");
+    alert(
+      "表示できるGPS地点がありません。\n" +
+      "過去の記録にGPS座標が保存されていない可能性があります。"
+    );
   }
 }
-
 
 // 地図を初期位置に戻す
 function returnMapHome() {
