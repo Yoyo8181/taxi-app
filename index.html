@@ -141,6 +141,13 @@ nav button.active { color:var(--green); background:#203b43; }
     </div>
   </section>
 
+ <section id="dispatchButtons" class="dispatch">
+    <button class="street" onclick="recordDispatch('流し')">流し</button>
+    <button class="uber" onclick="recordDispatch('Uber')">Uber</button>
+    <button class="go" onclick="recordDispatch('GO')">GO</button>
+    <button class="other" onclick="recordDispatch('その他')">その他</button>
+  </section>
+
   <main class="page active" id="homePage">
     <div class="mapbox">
       <div id="map"></div>
@@ -207,13 +214,6 @@ nav button.active { color:var(--green); background:#203b43; }
       <p class="note">記録はこのブラウザ内に保存されます。ブラウザのデータ削除や別端末では記録が消えたり共有されなかったりするため、定期的にデータを出力してください。</p>
     </div>
   </main>
-
-  <section id="dispatchButtons" class="dispatch">
-    <button class="street" onclick="recordDispatch('流し')">流し</button>
-    <button class="uber" onclick="recordDispatch('Uber')">Uber</button>
-    <button class="go" onclick="recordDispatch('GO')">GO</button>
-    <button class="other" onclick="recordDispatch('その他')">その他</button>
-  </section>
 
   <section id="homeActions" class="actions">
     <button class="action primary" onclick="toggleRest()">休憩</button>
