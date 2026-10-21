@@ -111,8 +111,18 @@ button.small { font-size:12px; padding:7px 9px; }
 }
 .status.orange { background:#fff0d8; color:#92530b; }
 .status.red { background:#fde9e9; color:#a52b32; }
-#map { height:440px; border-radius:10px; z-index:1; }
-.map-large #map { height:70vh; min-height:480px; }
+#map {
+  height: 65vh;
+  min-height: 480px;
+  border-radius: 10px;
+  z-index: 1;
+}
+
+.map-large #map {
+  height: 80vh;
+  min-height: 560px;
+}
+
 .history-item,.customer-card,.reservation-card {
   padding:12px 0;
   border-top:1px solid var(--border);
@@ -982,16 +992,17 @@ function initMap() {
     firstMapRender = false;
   }
 
-  // 地図の移動・拡大縮小後に位置を保存
+   // 地図の移動・拡大縮小後に位置を保存
   map.on("moveend", () => {
     if (!mapReady) return;
 
+    const center = map.getCenter();
+
     save("taxiMapView", {
-      center: [map.getCenter().lat, map.getCenter().lng],
+      center: [center.lat, center.lng],
       zoom: map.getZoom()
     });
   });
-
   mapReady = true;
 
   // 保存されている乗降地点などを地図に表示
