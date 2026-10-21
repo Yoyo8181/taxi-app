@@ -21,9 +21,13 @@ body {
 button,input,select { font:inherit; }
 button { cursor:pointer; color:white; border:0; }
 .app {
-  height:100vh; height:100dvh; overflow:hidden;
-  display:grid; grid-template-rows:auto auto minmax(100px,1fr) auto auto;
-  gap:7px; padding:8px;
+  height:100vh;
+  height:100dvh;
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
+  gap:7px;
+  padding:8px;
   padding-top:max(8px,env(safe-area-inset-top));
   padding-bottom:max(6px,env(safe-area-inset-bottom));
 }
@@ -37,7 +41,14 @@ header { display:flex; align-items:center; justify-content:space-between; gap:8p
 .sub { color:var(--muted); font-size:10px; margin-top:3px; }
 .progress { height:4px; background:#35465a; border-radius:8px; margin-top:7px; overflow:hidden; }
 #progressBar { height:100%; width:0; background:var(--green); }
-.mapbox { min-height:0; position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--line); }
+.mapbox {
+  height:100%;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
+  border-radius:12px;
+  border:1px solid var(--line);
+}
 #map { height:100%; width:100%; background:#26394a; }
 .map-tools { position:absolute; z-index:500; right:7px; top:7px; display:grid; gap:6px; }
 .map-tools button { background:#132337eF; border:1px solid #506277; border-radius:8px; padding:9px; font-size:12px; }
@@ -53,8 +64,24 @@ header { display:flex; align-items:center; justify-content:space-between; gap:8p
 nav { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
 nav button { background:transparent; color:var(--muted); padding:7px 2px; border-radius:8px; font-size:11px; }
 nav button.active { color:var(--green); background:#203b43; }
-.page { display:none; height:100%; min-height:0; overflow:auto; }
-.page.active { display:block; }
+.page {
+  display:none;
+  height:100%;
+  min-height:0;
+  overflow:auto;
+}
+
+.page.active {
+  display:block;
+}
+
+#homePage {
+  overflow:hidden;
+}
+
+#homePage .mapbox {
+  height:100%;
+}
 .page h2 { font-size:18px; margin:5px 0 12px; }
 .row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
 .field { margin:10px 0; }
