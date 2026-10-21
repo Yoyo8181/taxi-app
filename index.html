@@ -57,8 +57,20 @@ header { display:flex; align-items:center; justify-content:space-between; gap:8p
 .dispatch button { min-height:48px; border-radius:10px; font-size:12px; font-weight:800; }
 .uber { background:#303b49; } .go { background:#e0b82c; color:#19202b; }
 .street { background:#258c69; } .other { background:#6654bc; }
-.actions { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
-.action { min-height:43px; border-radius:10px; font-weight:800; font-size:13px; }
+.actions {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:5px;
+}
+.action {
+  min-width:0;
+  min-height:43px;
+  padding:6px 1px;
+  border-radius:10px;
+  font-weight:800;
+  font-size:clamp(10px,2.8vw,13px);
+  white-space:nowrap;
+}
 .primary { background:var(--green); color:#09271e; }
 .secondary { background:#30465b; }
 nav { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
@@ -197,15 +209,18 @@ nav button.active { color:var(--green); background:#203b43; }
   </main>
 
   <section id="dispatchButtons" class="dispatch">
+    <button class="street" onclick="recordDispatch('流し')">流し</button>
     <button class="uber" onclick="recordDispatch('Uber')">Uber</button>
     <button class="go" onclick="recordDispatch('GO')">GO</button>
-    <button class="street" onclick="recordDispatch('流し')">流し</button>
     <button class="other" onclick="recordDispatch('その他')">その他</button>
   </section>
 
   <section id="homeActions" class="actions">
-    <button class="action primary" onclick="openPage('recordPage')">＋ 乗車を記録</button>
-    <button class="action secondary" onclick="locateMe()">◎ 現在地を確認</button>
+    <button class="action primary" onclick="toggleRest()">休憩</button>
+    <button class="action secondary" onclick="openPage('historyPage')">データ</button>
+    <button class="action secondary" onclick="addReservation()">予約</button>
+    <button class="action secondary" onclick="openPage('settingsPage')">その他</button>
+    <button class="action secondary" onclick="toggleShift()">帰庫</button>
   </section>
 
   <nav>
@@ -249,6 +264,30 @@ function render() {
   document.getElementById('historyList').innerHTML = state.rides.slice().reverse().map(r=>
     `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${r.source}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${r.date} ${r.time}</div></div>`
   ).join('') || '<p class="note">まだ記録がありません。</p>';
+}
+let resting = false;
+
+function toggleRest() {
+  resting = !resting;
+  document.getElementById('mapStatus').textContent =
+    resting ? '休憩中' : '営業を再開しました';
+  alert(resting ? '休憩を開始しました' : '休憩を終了しました');
+}
+
+function addReservation() {
+  const place = prompt('予約の迎車地・内容を入力してください');
+  if (place === null || !place.trim()) return;
+
+  const time = prompt('予約時刻を入力してください（例：14:30）');
+  state.dispatches.push({
+    source: '予約',
+    place: place.trim(),
+    reservationTime: time || '',
+    time: new Date().toISOString(),
+    date: today()
+  });
+  persist();
+  alert('予約を記録しました');
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
