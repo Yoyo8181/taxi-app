@@ -38,7 +38,34 @@ header {
 }
 header h1 { margin:0 0 4px; font-size:22px; }
 header p { margin:0; font-size:13px; opacity:.85; }
-main { max-width:900px; margin:auto; padding:12px; }
+main {
+  max-width:900px;
+  margin:auto;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+}
+
+main > section.card {
+  order:10;
+}
+
+#salesCard {
+  order:1;
+}
+
+#dispatchCard {
+  order:2;
+}
+
+#mapCard {
+  order:3;
+}
+
+#operationCard {
+  order:4;
+}
+
 .card {
   background:var(--card);
   border:1px solid var(--border);
@@ -165,7 +192,7 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
 
 <main>
 
-  <section class="card">
+  <section class="card" id="dispatchCard">
     <h2>🔔 Uber・GO 配車記録</h2>
     <p class="hint">
       配車通知が来たら対応するボタンを押してください。
@@ -200,7 +227,7 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
     <div id="dispatchHistory"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="salesCard">
     <h2>📊 今月の売上</h2>
     <div class="grid">
       <div class="metric">
@@ -254,7 +281,7 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
     </p>
   </section>
 
-  <section class="card">
+  <section class="card" id="operationCard">
     <h2>🚘 営業・乗降記録</h2>
     <div class="grid">
       <div class="metric">
