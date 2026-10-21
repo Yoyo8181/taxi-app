@@ -225,6 +225,27 @@ main > section.card {
   order: 4;
 }
 
+/* ===== スマホ表示の余白を最適化 ===== */
+@media (max-width: 600px) {
+  main {
+    padding: 6px;
+  }
+
+  main > section.card {
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  #salesCard h2,
+  #dispatchCard h2,
+  #operationCard h2,
+  #mapCard h2 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 16px;
+  }
+}
+
 </style>
 </head>
 
