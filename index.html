@@ -199,6 +199,31 @@ hr { border:0; border-top:1px solid var(--border); margin:16px 0; }
   }
 }
 
+/* ===== スマホ・営業画面の表示順 ===== */
+main {
+  display: flex;
+  flex-direction: column;
+}
+
+main > section.card {
+  order: 10;
+}
+
+#salesCard {
+  order: 1;
+}
+
+#dispatchCard {
+  order: 2;
+}
+
+#mapCard {
+  order: 3;
+}
+
+#operationCard {
+  order: 4;
+}
 
 </style>
 </head>
