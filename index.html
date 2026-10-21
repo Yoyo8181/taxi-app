@@ -356,6 +356,8 @@ function toggleRest() {
 
 
 function addReservation() {
+  alert('予約ボタンの処理が呼ばれました');
+  
   const date = prompt('予約日を入力してください（例：2026-10-25）', today());
   if (date === null || !date.trim()) return;
 
