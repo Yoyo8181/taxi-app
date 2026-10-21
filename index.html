@@ -246,6 +246,28 @@ main > section.card {
   }
 }
 
+/* ===== スマホ：売上表示を見やすくする ===== */
+@media (max-width: 600px) {
+  #salesCard .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #salesCard .metric {
+    padding: 10px;
+    min-width: 0;
+  }
+
+  #salesCard .metric strong {
+    font-size: 21px;
+    line-height: 1.2;
+  }
+
+  #salesCard .metric span {
+    font-size: 12px;
+  }
+}
+
 </style>
 </head>
 
