@@ -110,6 +110,41 @@ nav button.active { color:var(--green); background:#203b43; }
   .action { min-height:37px; }
   nav button { padding:5px 2px; }
 }
+
+
+.reservation-preview {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid #263b50;
+  border-radius: 9px;
+  background: #101d2c;
+}
+
+.reservation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 25px;
+  font-size: 12px;
+  color: #dce7f2;
+}
+
+.reservation-row strong {
+  flex: 0 0 42px;
+  color: #70d6a1;
+}
+
+.reservation-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+  
 </style>
 </head>
 <body>
@@ -158,7 +193,18 @@ nav button.active { color:var(--green); background:#203b43; }
       <div class="map-label" id="mapStatus">地図を読み込み中…</div>
     </div>
   </main>
-
+  
+    <section id="reservationPreview" class="reservation-preview">
+    <div class="reservation-row" id="reservationRow1">
+      <strong>予約1</strong>
+      <span>予約はありません</span>
+    </div>
+    <div class="reservation-row" id="reservationRow2">
+      <strong>予約2</strong>
+      <span>予約はありません</span>
+    </div>
+  </section>
+  
   <main class="page" id="recordPage">
     <h2>🚘 乗車・降車記録</h2>
     <div class="panel">
@@ -250,9 +296,11 @@ function today() {
 }
 function yen(n) { return '¥'+Number(n||0).toLocaleString('ja-JP'); }
 function todaysRides() { return state.rides.filter(r=>r.date===today()); }
+
 function render() {
   const rides = todaysRides();
   const total = rides.reduce((s,r)=>s+Number(r.fare||0),0);
+
   document.getElementById('sales').textContent=yen(total);
   document.getElementById('rideCount').textContent=rides.length+'回';
   document.getElementById('remaining').textContent=yen(Math.max(0,state.goal-total));
@@ -261,9 +309,41 @@ function render() {
   document.getElementById('shiftStatus').textContent=state.active?'● 営業中':'● 営業前';
   document.getElementById('shiftButton').textContent=state.active?'営業終了':'営業開始';
   document.getElementById('goalInput').value=state.goal;
+
   document.getElementById('historyList').innerHTML = state.rides.slice().reverse().map(r=>
-    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${r.source}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${r.date} ${r.time}</div></div>`
+    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
   ).join('') || '<p class="note">まだ記録がありません。</p>';
+
+  // 予約を日時順に並べる
+  const reservations = (state.dispatches || [])
+    .filter(d => d.source === '予約')
+    .map(d => ({
+      ...d,
+      date: d.date || today(),
+      reservationTime: d.reservationTime || '',
+      pickup: d.pickup || d.place || '',
+      dropoff: d.dropoff || '',
+      customer: d.customer || ''
+    }))
+    .filter(d => {
+      const dt = new Date(d.date + 'T' + (d.reservationTime || '00:00'));
+      return !isNaN(dt.getTime()) && dt >= new Date();
+    })
+    .sort((a,b) =>
+      (a.date + ' ' + a.reservationTime)
+        .localeCompare(b.date + ' ' + b.reservationTime)
+    )
+    .slice(0,2);
+
+  [1,2].forEach((n,i) => {
+    const row = document.getElementById('reservationRow' + n);
+    if (!row) return;
+
+    const r = reservations[i];
+    row.innerHTML = r
+      ? `<strong>予約${n}</strong><span>${escapeHtml(r.date)} ${escapeHtml(r.reservationTime)}　${escapeHtml(r.customer || '名前未登録')}　${escapeHtml(r.pickup || '乗車地未登録')} → ${escapeHtml(r.dropoff || '降車地未登録')}</span>`
+      : `<strong>予約${n}</strong><span>予約はありません</span>`;
+  });
 }
 let resting = false;
 
@@ -274,18 +354,29 @@ function toggleRest() {
   alert(resting ? '休憩を開始しました' : '休憩を終了しました');
 }
 
+
 function addReservation() {
-  const place = prompt('予約の迎車地・内容を入力してください');
-  if (place === null || !place.trim()) return;
+  const date = prompt('予約日を入力してください（例：2026-10-25）', today());
+  if (date === null || !date.trim()) return;
 
   const time = prompt('予約時刻を入力してください（例：14:30）');
+  if (time === null || !time.trim()) return;
+
+  const customer = prompt('お客様名（不明なら空欄）') || '';
+  const pickup = prompt('乗車場所（不明なら空欄）') || '';
+  const dropoff = prompt('降車場所（不明なら空欄）') || '';
+
   state.dispatches.push({
     source: '予約',
-    place: place.trim(),
-    reservationTime: time || '',
-    time: new Date().toISOString(),
-    date: today()
+    customer: customer.trim(),
+    pickup: pickup.trim(),
+    dropoff: dropoff.trim(),
+    place: pickup.trim(),
+    reservationTime: time.trim(),
+    date: date.trim(),
+    time: new Date().toISOString()
   });
+
   persist();
   alert('予約を記録しました');
 }
