@@ -328,7 +328,7 @@ nav button {
     <div class="panel">
       <div class="field">
         <label>顧客を検索</label>
-        <input id="customerSearch" type="search" placeholder="名前・電話番号で検索">
+        <input id="customerSearch" type="search" placeholder="名前・電話番号で検索" oninput="render()">
       </div>
       <div id="customerList"></div>
       <button class="full secondary" onclick="openPage('reservationListPage')">予約一覧に戻る</button>
