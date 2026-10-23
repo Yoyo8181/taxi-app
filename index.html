@@ -182,7 +182,22 @@ nav button {
   font-size: 13px;
   font-weight: bold;
 }
- 
+  
+/* 予約一覧の見出しを目立たせる */
+.reservation-header {
+  background: #eaf2f8;
+  border: 1px solid #9aafc2;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.reservation-header strong {
+  color: #263b50;
+  font-size: 14px;
+}
+
 </style>
 </head>
 <body>
@@ -312,7 +327,7 @@ nav button {
   <main class="page" id="reservationListPage">
     <h2>📅 予約一覧</h2>
     <div class="panel">
-     <div class="row">
+     <div class="row reservation-header">
        <strong>登録済みの予約</strong>
        <div class="row">
          <button class="secondary" style="padding:7px;border-radius:7px" onclick="openPage('customerListPage')">👥 顧客</button>
