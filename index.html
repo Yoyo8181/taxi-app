@@ -539,6 +539,7 @@ function saveReservation() {
   const date = document.getElementById('reservationDate').value;
   const time = document.getElementById('reservationClock').value;
   const customer = document.getElementById('reservationCustomer').value.trim();
+  const phone = document.getElementById('reservationPhone').value.trim();
   const pickup = document.getElementById('reservationPickup').value.trim();
   const dropoff = document.getElementById('reservationDropoff').value.trim();
 
@@ -560,6 +561,7 @@ function saveReservation() {
     state.dispatches[index] = {
       ...state.dispatches[index],
       customer,
+      phone,
       pickup,
       dropoff,
       place: pickup,
@@ -571,6 +573,7 @@ function saveReservation() {
       id: Date.now().toString() + Math.random().toString(36).slice(2),
       source: '予約',
       customer,
+      phone,
       pickup,
       dropoff,
       place: pickup,
@@ -586,6 +589,7 @@ function saveReservation() {
   document.getElementById('reservationDate').value = '';
   document.getElementById('reservationClock').value = '';
   document.getElementById('reservationCustomer').value = '';
+  document.getElementById('reservationPhone').value = '';
   document.getElementById('reservationPickup').value = '';
   document.getElementById('reservationDropoff').value = '';
 
