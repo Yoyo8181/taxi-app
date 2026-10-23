@@ -462,6 +462,7 @@ function render() {
           <div class="listitem">
             <div><strong>${escapeHtml(r.date)} ${escapeHtml(r.reservationTime)}</strong></div>
             <div>${escapeHtml(r.customer || '名前未登録')}</div>
+            <div>電話番号：${escapeHtml(r.phone || '未登録')}</div>
             <div>${escapeHtml(r.pickup || '乗車地未登録')} → ${escapeHtml(r.dropoff || '降車地未登録')}</div>
             <div class="row">
               <button type="button" onclick="editReservation('${r.id || ''}')">編集</button>
