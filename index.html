@@ -414,7 +414,9 @@ function editReservation(id) {
     return;
   }
 
-  const reservation = state.dispatches.find(d => d.id === id);
+  const reservation = state.dispatches.find(
+  d => d.source === '予約' && String(d.id) === String(id)
+);
   if (!reservation) {
     alert('予約が見つかりません。');
     return;
