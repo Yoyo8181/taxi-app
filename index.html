@@ -233,6 +233,34 @@ nav button.active { color:var(--green); background:#203b43; }
     </div>
   </main>
 
+  <main class="page" id="reservationPage">
+    <h2>📅 予約登録</h2>
+    <div class="panel">
+      <div class="field">
+        <label>予約日</label>
+        <input id="reservationDate" type="date" value="">
+      </div>
+      <div class="field">
+        <label>予約時刻</label>
+        <input id="reservationClock" type="time">
+      </div>
+      <div class="field">
+        <label>お客様名（任意）</label>
+        <input id="reservationCustomer" placeholder="お客様名">
+      </div>
+      <div class="field">
+        <label>乗車場所</label>
+        <input id="reservationPickup" placeholder="乗車場所">
+      </div>
+      <div class="field">
+        <label>降車場所</label>
+        <input id="reservationDropoff" placeholder="降車場所">
+      </div>
+      <button class="full primary" onclick="saveReservation()">予約を保存</button>
+      <button class="full secondary" onclick="openPage('homePage')">キャンセルして戻る</button>
+    </div>
+  </main>
+
   <main class="page" id="historyPage">
     <h2>📋 営業履歴</h2>
     <div class="panel">
@@ -264,7 +292,7 @@ nav button.active { color:var(--green); background:#203b43; }
   <section id="homeActions" class="actions">
     <button class="action primary" onclick="toggleRest()">休憩</button>
     <button class="action secondary" onclick="openPage('historyPage')">データ</button>
-    <button class="action secondary" onclick="addReservation()">予約</button>
+    <button class="action secondary" onclick="openPage('reservationPage')">予約</button>
     <button class="action secondary" onclick="openPage('settingsPage')">その他</button>
     <button class="action secondary" onclick="toggleShift()">帰庫</button>
   </section>
@@ -355,33 +383,51 @@ function toggleRest() {
 }
 
 
+
 function addReservation() {
-  alert('予約ボタンの処理が呼ばれました');
-  
-  const date = prompt('予約日を入力してください（例：2026-10-25）', today());
-  if (date === null || !date.trim()) return;
+  const dateInput = document.getElementById('reservationDate');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = today();
+  }
 
-  const time = prompt('予約時刻を入力してください（例：14:30）');
-  if (time === null || !time.trim()) return;
+  openPage('reservationPage');
+}
 
-  const customer = prompt('お客様名（不明なら空欄）') || '';
-  const pickup = prompt('乗車場所（不明なら空欄）') || '';
-  const dropoff = prompt('降車場所（不明なら空欄）') || '';
+function saveReservation() {
+  const date = document.getElementById('reservationDate').value;
+  const time = document.getElementById('reservationClock').value;
+  const customer = document.getElementById('reservationCustomer').value.trim();
+  const pickup = document.getElementById('reservationPickup').value.trim();
+  const dropoff = document.getElementById('reservationDropoff').value.trim();
+
+  if (!date || !time) {
+    alert('予約日と予約時刻を入力してください');
+    return;
+  }
 
   state.dispatches.push({
     source: '予約',
-    customer: customer.trim(),
-    pickup: pickup.trim(),
-    dropoff: dropoff.trim(),
-    place: pickup.trim(),
-    reservationTime: time.trim(),
-    date: date.trim(),
+    customer,
+    pickup,
+    dropoff,
+    place: pickup,
+    reservationTime: time,
+    date,
     time: new Date().toISOString()
   });
 
   persist();
-  alert('予約を記録しました');
+
+  document.getElementById('reservationDate').value = '';
+  document.getElementById('reservationClock').value = '';
+  document.getElementById('reservationCustomer').value = '';
+  document.getElementById('reservationPickup').value = '';
+  document.getElementById('reservationDropoff').value = '';
+
+  openPage('homePage');
+  alert('予約を保存しました');
 }
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
