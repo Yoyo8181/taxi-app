@@ -548,6 +548,37 @@ function saveReservation() {
     return;
   }
 
+  
+  // 電話番号を使って顧客情報を自動登録・更新
+  const normalizedPhone = phone.replace(/\D/g, '');
+
+  if (normalizedPhone) {
+    if (!Array.isArray(state.customers)) {
+      state.customers = [];
+    }
+
+    const existingCustomer = state.customers.find(
+      c => (c.phone || '').replace(/\D/g, '') === normalizedPhone
+    );
+
+    if (existingCustomer) {
+      // 同じ電話番号なら既存の顧客情報を更新
+      if (customer) {
+        existingCustomer.name = customer;
+      }
+      existingCustomer.phone = phone;
+      existingCustomer.updatedAt = new Date().toISOString();
+    } else {
+      // 初めての電話番号なら新しい顧客として登録
+      state.customers.push({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        name: customer,
+        phone: phone,
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+
   if (editingReservationId !== null) {
     const index = state.dispatches.findIndex(
       d => d.id === editingReservationId
