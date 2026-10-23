@@ -155,7 +155,34 @@ nav button.active { color:var(--green); background:#203b43; }
   font-weight: bold;
   white-space: nowrap;
 }
+
   
+/* 下部メニューを5つ横一列にする */
+nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+nav button {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 1px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 予約一覧の編集・削除ボタンを見やすくする */
+#reservationList .listitem button {
+  background: #263b50;
+  color: #ffffff;
+  border: 1px solid #70d6a1;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: bold;
+}
+ 
 </style>
 </head>
 <body>
