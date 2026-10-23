@@ -486,6 +486,32 @@ function render() {
       : '<p class="note">予約はありません。</p>';
   }
 
+  // 顧客一覧を表示
+  const customerList = document.getElementById('customerList');
+
+  if (customerList) {
+    if (!Array.isArray(state.customers)) {
+      state.customers = [];
+    }
+
+    const searchInput = document.getElementById('customerSearch');
+    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+    const filteredCustomers = state.customers.filter(c =>
+      (c.name || '').toLowerCase().includes(keyword) ||
+      (c.phone || '').replace(/\D/g, '').includes(keyword.replace(/\D/g, ''))
+    );
+
+    customerList.innerHTML = filteredCustomers.length
+      ? filteredCustomers.map(c => `
+          <div class="listitem">
+            <div><strong>${escapeHtml(c.name || '名前未登録')}</strong></div>
+            <div>電話番号：${escapeHtml(c.phone || '未登録')}</div>
+          </div>
+        `).join('')
+      : '<p class="note">顧客情報はありません。</p>';
+  }
+
 }
 
 let resting = false;
