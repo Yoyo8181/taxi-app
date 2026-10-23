@@ -368,8 +368,11 @@ function render() {
     if (!row) return;
 
     const r = reservations[i];
-    row.innerHTML = r
-      ? `<strong>予約${n}</strong><span>${escapeHtml(r.date)} ${escapeHtml(r.reservationTime)}　${escapeHtml(r.customer || '名前未登録')}　${escapeHtml(r.pickup || '乗車地未登録')} → ${escapeHtml(r.dropoff || '降車地未登録')}</span>`
+       row.innerHTML = r
+      ? `<strong>予約${n}</strong>
+         <span>${escapeHtml(r.date)} ${escapeHtml(r.reservationTime)}　${escapeHtml(r.customer || '名前未登録')}　${escapeHtml(r.pickup || '乗車地未登録')} → ${escapeHtml(r.dropoff || '降車地未登録')}</span>
+         <button type="button" onclick="editReservation('${r.id || ''}')">編集</button>
+         <button type="button" onclick="deleteReservation('${r.id || ''}')">削除</button>`
       : `<strong>予約${n}</strong><span>予約はありません</span>`;
   });
 }
@@ -382,7 +385,7 @@ function toggleRest() {
   alert(resting ? '休憩を開始しました' : '休憩を終了しました');
 }
 
-
+let editingReservationId = null;
 
 function addReservation() {
   const dateInput = document.getElementById('reservationDate');
@@ -392,6 +395,46 @@ function addReservation() {
 
   openPage('reservationPage');
 }
+
+
+function editReservation(id) {
+  if (!id) {
+    alert('この予約は古いデータのため、編集できません。');
+    return;
+  }
+
+  const reservation = state.dispatches.find(d => d.id === id);
+  if (!reservation) {
+    alert('予約が見つかりません。');
+    return;
+  }
+
+  editingReservationId = id;
+
+  document.getElementById('reservationDate').value = reservation.date || '';
+  document.getElementById('reservationClock').value = reservation.reservationTime || '';
+  document.getElementById('reservationCustomer').value = reservation.customer || '';
+  document.getElementById('reservationPickup').value = reservation.pickup || reservation.place || '';
+  document.getElementById('reservationDropoff').value = reservation.dropoff || '';
+
+  openPage('reservationPage');
+}
+
+function deleteReservation(id) {
+  if (!id) {
+    alert('この予約は古いデータのため、削除できません。');
+    return;
+  }
+
+  if (!confirm('この予約を削除しますか？')) {
+    return;
+  }
+
+  state.dispatches = state.dispatches.filter(d => d.id !== id);
+  persist();
+  alert('予約を削除しました');
+}
+
 
 function saveReservation() {
   const date = document.getElementById('reservationDate').value;
@@ -405,17 +448,40 @@ function saveReservation() {
     return;
   }
 
-  state.dispatches.push({
-    source: '予約',
-    customer,
-    pickup,
-    dropoff,
-    place: pickup,
-    reservationTime: time,
-    date,
-    time: new Date().toISOString()
-  });
+  if (editingReservationId !== null) {
+    const index = state.dispatches.findIndex(
+      d => d.id === editingReservationId
+    );
 
+    if (index === -1) {
+      alert('編集する予約が見つかりません。');
+      return;
+    }
+
+    state.dispatches[index] = {
+      ...state.dispatches[index],
+      customer,
+      pickup,
+      dropoff,
+      place: pickup,
+      reservationTime: time,
+      date
+    };
+  } else {
+    state.dispatches.push({
+      id: Date.now().toString() + Math.random().toString(36).slice(2),
+      source: '予約',
+      customer,
+      pickup,
+      dropoff,
+      place: pickup,
+      reservationTime: time,
+      date,
+      time: new Date().toISOString()
+    });
+  }
+
+  editingReservationId = null;
   persist();
 
   document.getElementById('reservationDate').value = '';
@@ -427,6 +493,7 @@ function saveReservation() {
   openPage('homePage');
   alert('予約を保存しました');
 }
+
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
