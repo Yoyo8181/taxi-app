@@ -320,12 +320,15 @@ nav button.active { color:var(--green); background:#203b43; }
     <button class="action secondary" onclick="toggleShift()">帰庫</button>
   </section>
 
-  <nav>
+ 
+<nav>
     <button class="active" onclick="openPage('homePage',this)">⌂ ホーム</button>
     <button onclick="openPage('recordPage',this)">＋ 記録</button>
+    <button onclick="openPage('reservationListPage',this)">📅 予約一覧</button>
     <button onclick="openPage('historyPage',this)">☷ 履歴</button>
     <button onclick="openPage('settingsPage',this)">⚙ 設定</button>
-  </nav>
+</nav>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
