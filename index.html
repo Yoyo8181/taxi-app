@@ -182,21 +182,34 @@ nav button {
   font-size: 13px;
   font-weight: bold;
 }
-  
-/* 予約一覧の見出しを自然に区切る */
+
+/* 予約一覧の見出しは罫線だけで区切る */
 .reservation-header {
-  background: #203449;
-  border: 1px solid #40566b;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 10px 0;
+  margin-bottom: 8px;
   box-shadow: none;
 }
 
 .reservation-header strong {
-  color: #f3f7fb;
+  color: var(--text);
   font-size: 14px;
 }
+
+/* 顧客・予約追加ボタンの縁取り */
+.reservation-header button {
+  border: 1px solid #70d6a1;
+  border-radius: 7px;
+  font-weight: bold;
+}
+
+.reservation-header button:last-child {
+  border-color: #438cff;
+}
+
 
 </style>
 </head>
