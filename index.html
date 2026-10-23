@@ -271,7 +271,19 @@ nav button.active { color:var(--green); background:#203b43; }
       <button class="full secondary" onclick="openPage('homePage')">キャンセルして戻る</button>
     </div>
   </main>
-
+  
+  <main class="page" id="reservationListPage">
+    <h2>📅 予約一覧</h2>
+    <div class="panel">
+      <div class="row">
+        <strong>登録済みの予約</strong>
+        <button class="secondary" style="padding:7px;border-radius:7px" onclick="addReservation()">＋ 予約追加</button>
+      </div>
+      <div id="reservationList"></div>
+      <button class="full secondary" onclick="openPage('homePage')">トップに戻る</button>
+    </div>
+  </main>
+  
   <main class="page" id="historyPage">
     <h2>📋 営業履歴</h2>
     <div class="panel">
@@ -386,6 +398,40 @@ function render() {
          <button type="button" onclick="deleteReservation('${r.id || ''}')">削除</button>`
       : `<strong>予約${n}</strong><span>予約はありません</span>`;
   });
+
+  const reservationList = document.getElementById('reservationList');
+
+  if (reservationList) {
+    const allReservations = (state.dispatches || [])
+      .filter(d => d.source === '予約')
+      .map(d => ({
+        ...d,
+        date: d.date || today(),
+        reservationTime: d.reservationTime || '',
+        pickup: d.pickup || d.place || '',
+        dropoff: d.dropoff || '',
+        customer: d.customer || ''
+      }))
+      .sort((a, b) =>
+        (a.date + ' ' + a.reservationTime)
+          .localeCompare(b.date + ' ' + b.reservationTime)
+      );
+
+    reservationList.innerHTML = allReservations.length
+      ? allReservations.map(r => `
+          <div class="listitem">
+            <div><strong>${escapeHtml(r.date)} ${escapeHtml(r.reservationTime)}</strong></div>
+            <div>${escapeHtml(r.customer || '名前未登録')}</div>
+            <div>${escapeHtml(r.pickup || '乗車地未登録')} → ${escapeHtml(r.dropoff || '降車地未登録')}</div>
+            <div class="row">
+              <button type="button" onclick="editReservation('${r.id || ''}')">編集</button>
+              <button type="button" onclick="deleteReservation('${r.id || ''}')">削除</button>
+            </div>
+          </div>
+        `).join('')
+      : '<p class="note">予約はありません。</p>';
+  }
+
 }
 let resting = false;
 
