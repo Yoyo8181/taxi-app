@@ -524,11 +524,17 @@ function render() {
     const searchInput = document.getElementById('customerSearch');
     const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    const filteredCustomers = state.customers.filter(c =>
-      (c.name || '').toLowerCase().includes(keyword) ||
-      (c.phone || '').replace(/\D/g, '').includes(keyword.replace(/\D/g, ''))
-    );
+    const filteredCustomers = state.customers.filter(c => {
+  const name = (c.name || '').toLowerCase();
+  const phone = (c.phone || '').replace(/\D/g, '');
+  const nameKeyword = keyword;
+  const phoneKeyword = keyword.replace(/\D/g, '');
 
+  if (!keyword) return true;
+
+    return name.includes(nameKeyword) ||
+    (phoneKeyword !== '' && phone.includes(phoneKeyword));
+});
     customerList.innerHTML = filteredCustomers.length
       ? filteredCustomers.map(c => `
           <div class="listitem">
