@@ -482,7 +482,7 @@ let state = JSON.parse(localStorage.getItem(KEY) || 'null') || {
   rides: [], dispatches: [], goal: 50000, active: false
 };
 if(!Array.isArray(state.queuedJobs)) state.queuedJobs=[];
-let map, userMarker, rideStartTime = '';
+let map, userMarker, ridePointMarker, rideStartTime = '';
 let pickupPoint = null, dropoffPoint = null;
 let pickupPointTime = '', dropoffPointTime = '', editingRideIndex = null;
 let pendingRideLocationRequests = 0;
@@ -520,7 +520,7 @@ function render() {
   updateDispatchButtonLocks();
 
   const savedRideItems = state.rides.map((r,index)=>({r,index})).reverse().map(({r,index})=>
-    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div>${r.customerName||r.customerPhone?`<div>お客様：${escapeHtml(r.customerName||'名前未入力')}（${escapeHtml(r.customerPhone||'電話番号未入力')}）</div>`:''}<div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}${r.requestedAt?`<br>受注：${escapeHtml(formatRideDateTime(r.requestedAt))}　現着：${escapeHtml(formatRideDateTime(r.arrivedAt))}`:''}<br>乗車：${escapeHtml(formatRideDateTime(r.pickupRecordedAt||r.pickupTime))}　降車：${escapeHtml(formatRideDateTime(r.dropoffRecordedAt))}${r.requestedCoords?`<br>受注GPS：${escapeHtml(formatCoords(r.requestedCoords))}`:''}${r.arrivedCoords?`<br>現着GPS：${escapeHtml(formatCoords(r.arrivedCoords))}`:''}${r.pickupCoords?`<br>乗車GPS：${escapeHtml(formatCoords(r.pickupCoords))}`:''}${r.dropoffCoords?`<br>降車GPS：${escapeHtml(formatCoords(r.dropoffCoords))}`:''}</div><button class="secondary" style="padding:7px 12px;border-radius:7px" onclick="editRide(${index})">編集</button></div>`
+    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div>${r.customerName||r.customerPhone?`<div>お客様：${escapeHtml(r.customerName||'名前未入力')}（${escapeHtml(r.customerPhone||'電話番号未入力')}）</div>`:''}<div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}${r.requestedAt?`<br>受注：${escapeHtml(formatRideDateTime(r.requestedAt))}　現着：${escapeHtml(formatRideDateTime(r.arrivedAt))}`:''}<br>乗車：${escapeHtml(formatRideDateTime(r.pickupRecordedAt||r.pickupTime))}　降車：${escapeHtml(formatRideDateTime(r.dropoffRecordedAt))}${r.requestedCoords?`<br>受注GPS：${escapeHtml(formatCoords(r.requestedCoords))}`:''}${r.arrivedCoords?`<br>現着GPS：${escapeHtml(formatCoords(r.arrivedCoords))}`:''}${r.pickupCoords?`<br>乗車GPS：${escapeHtml(formatCoords(r.pickupCoords))}`:''}${r.dropoffCoords?`<br>降車GPS：${escapeHtml(formatCoords(r.dropoffCoords))}`:''}</div>${r.pickupCoords?`<button class="secondary" style="padding:7px 12px;border-radius:7px" onclick="showRidePoint(${index},'pickup')">乗車地点を地図で確認</button>`:''} ${r.dropoffCoords?`<button class="secondary" style="padding:7px 12px;border-radius:7px" onclick="showRidePoint(${index},'dropoff')">降車地点を地図で確認</button>`:''}<button class="secondary" style="padding:7px 12px;border-radius:7px" onclick="editRide(${index})">場所・記録を編集</button></div>`
   ).join('');
   const cancelledJobItems = (state.dispatches||[]).filter(d=>d.status==='キャンセル').slice().reverse().map(d=>
     `<div class="listitem"><strong>${escapeHtml(d.source)}｜キャンセル</strong><div class="note">${escapeHtml(d.date||'')} ${escapeHtml(d.time?new Date(d.time).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'')}</div></div>`
@@ -1175,6 +1175,21 @@ function editRide(index) {
   const editor=document.getElementById('rideEditPanel');
   editor.style.display='block';
   editor.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function showRidePoint(index,type) {
+  const ride=state.rides[index];
+  const point=ride?.[type==='pickup'?'pickupCoords':'dropoffCoords'];
+  if(!Array.isArray(point)||point.length<2) { alert('この地点のGPSは記録されていません'); return; }
+  openPage('homePage');
+  setTimeout(()=>{
+    if(!map) { alert('地図を読み込めません'); return; }
+    map.invalidateSize();
+    map.setView(point,17);
+    if(ridePointMarker) ridePointMarker.remove();
+    const label=type==='pickup'?'乗車':'降車';
+    ridePointMarker=L.marker(point).addTo(map).bindPopup(`<strong>${label}地点</strong><br>${escapeHtml(ride[type]||'場所未入力')}<br>${escapeHtml(formatCoords(point))}`).openPopup();
+    document.getElementById('mapStatus').textContent=label+'地点を表示中｜「場所・記録を編集」から地名を入力できます';
+  },100);
 }
 function readEditedPoint(latId,lonId,label) {
   const latText=document.getElementById(latId).value.trim();
