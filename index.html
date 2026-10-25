@@ -359,6 +359,23 @@ nav button {
         <strong>記録一覧</strong>
         <button class="secondary" style="padding:7px;border-radius:7px" onclick="exportData()">データ出力</button>
       </div>
+      <div id="rideEditPanel" class="panel" style="display:none;margin-top:10px">
+        <h3>乗車記録を編集</h3>
+        <div class="field"><label>お客様の名前</label><input id="editRideCustomerName"></div>
+        <div class="field"><label>電話番号</label><input id="editRideCustomerPhone" type="tel" inputmode="tel"></div>
+        <div class="field"><label>乗車場所</label><input id="editRidePickup"></div>
+        <div class="field"><label>降車場所</label><input id="editRideDropoff"></div>
+        <div class="field"><label>運賃（円）</label><input id="editRideFare" type="number" min="0" step="10"></div>
+        <div class="field"><label>乗車方法</label><select id="editRideSource"><option>Uber</option><option>GO</option><option>流し</option><option>無線・その他</option><option>予約</option></select></div>
+        <div class="field"><label>乗車時刻</label><input id="editRidePickupTime" type="datetime-local"></div>
+        <div class="field"><label>乗車地点 緯度</label><input id="editRidePickupLat" type="number" step="any"></div>
+        <div class="field"><label>乗車地点 経度</label><input id="editRidePickupLon" type="number" step="any"></div>
+        <div class="field"><label>降車時刻</label><input id="editRideDropoffTime" type="datetime-local"></div>
+        <div class="field"><label>降車地点 緯度</label><input id="editRideDropoffLat" type="number" step="any"></div>
+        <div class="field"><label>降車地点 経度</label><input id="editRideDropoffLon" type="number" step="any"></div>
+        <button class="full primary" onclick="saveRideEdit()">変更を保存</button>
+        <button class="full secondary" onclick="cancelRideEdit()">キャンセル</button>
+      </div>
       <div id="historyList"></div>
     </div>
   </main>
@@ -402,6 +419,8 @@ let state = JSON.parse(localStorage.getItem(KEY) || 'null') || {
 };
 let map, userMarker, rideStartTime = '';
 let pickupPoint = null, dropoffPoint = null;
+let pickupPointTime = '', dropoffPointTime = '', editingRideIndex = null;
+let pendingRideLocationRequests = 0;
 function persist() {
   localStorage.setItem(KEY, JSON.stringify(state));
   render();
@@ -425,7 +444,8 @@ function render() {
   document.getElementById('goalInput').value=state.goal;
   document.getElementById('historyList').innerHTML = state.rides.slice().reverse().map(r=>
     `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
-    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div>${r.customerName||r.customerPhone?`<div>お客様：${escapeHtml(r.customerName||'名前未入力')}（${escapeHtml(r.customerPhone||'電話番号未入力')}）</div>`:''}<div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
+  document.getElementById('historyList').innerHTML = state.rides.map((r,index)=>({r,index})).reverse().map(({r,index})=>
+    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div>${r.customerName||r.customerPhone?`<div>お客様：${escapeHtml(r.customerName||'名前未入力')}（${escapeHtml(r.customerPhone||'電話番号未入力')}）</div>`:''}<div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}<br>乗車：${escapeHtml(formatRideDateTime(r.pickupRecordedAt||r.pickupTime))}　降車：${escapeHtml(formatRideDateTime(r.dropoffRecordedAt))}</div><button class="secondary" style="padding:7px 12px;border-radius:7px" onclick="editRide(${index})">編集</button></div>`
   ).join('') || '<p class="note">まだ記録がありません。</p>';
   // 予約を日時順に並べる
   const reservations = (state.dispatches || [])
@@ -676,26 +696,128 @@ function saveGoal() {
 }
 function stampPickup() {
   rideStartTime=new Date().toISOString();
+  pickupPointTime=rideStartTime;
   document.getElementById('rideTime').textContent='乗車時刻：'+new Date(rideStartTime).toLocaleString('ja-JP');
 }
 function captureRidePoint(type) {
+  const label=type==='pickup'?'乗車地':'降車地';
+  const status=document.getElementById(type+'CoordsStatus');
+  const capturedAt=new Date().toISOString();
+  if(type==='pickup') pickupPointTime=capturedAt;
+  else dropoffPointTime=capturedAt;
+  if(type==='pickup') document.getElementById('rideTime').textContent='乗車時刻：'+new Date(capturedAt).toLocaleString('ja-JP');
+  status.textContent=label+'の時刻を記録しました。現在地を取得中…';
   if(!navigator.geolocation) {
+    status.textContent=label+'の時刻は記録済み（GPS未記録）';
     alert('この端末では位置情報を利用できません');
     return;
   }
   const status=document.getElementById(type+'CoordsStatus');
   status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を取得中…';
+  pendingRideLocationRequests++;
   navigator.geolocation.getCurrentPosition(pos=>{
+    pendingRideLocationRequests--;
     const point=[pos.coords.latitude,pos.coords.longitude];
+    const pointTime=new Date(pos.timestamp||capturedAt).toISOString();
     if(type==='pickup') pickupPoint=point;
     else dropoffPoint=point;
+    if(type==='pickup') pickupPointTime=pointTime;
+    else dropoffPointTime=pointTime;
+    if(type==='pickup') document.getElementById('rideTime').textContent='乗車時刻：'+new Date(pointTime).toLocaleString('ja-JP');
     status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を記録しました（'+point[0].toFixed(6)+', '+point[1].toFixed(6)+'）';
+    status.textContent=label+'の時刻と位置を記録しました（'+point[0].toFixed(6)+', '+point[1].toFixed(6)+'）';
   },()=>{
     status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を取得できませんでした';
+    pendingRideLocationRequests--;
+    status.textContent=label+'の時刻は記録済み（位置情報は取得できませんでした）';
     alert('位置情報が取得できません。ブラウザの位置情報許可を確認してください。');
   },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+function formatRideDateTime(value) {
+  if(!value) return '未記録';
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?'時刻不明':date.toLocaleString('ja-JP');
+}
+function toDateTimeInput(value) {
+  if(!value) return '';
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);
+}
+function fromDateTimeInput(value) {
+  return value?new Date(value).toISOString():'';
+}
+function editRide(index) {
+  const ride=state.rides[index];
+  if(!ride) return;
+  editingRideIndex=index;
+  document.getElementById('editRideCustomerName').value=ride.customerName||'';
+  document.getElementById('editRideCustomerPhone').value=ride.customerPhone||'';
+  document.getElementById('editRidePickup').value=ride.pickup||'';
+  document.getElementById('editRideDropoff').value=ride.dropoff||'';
+  document.getElementById('editRideFare').value=ride.fare??'';
+  document.getElementById('editRideSource').value=ride.source||'Uber';
+  document.getElementById('editRidePickupTime').value=toDateTimeInput(ride.pickupRecordedAt||ride.pickupTime);
+  document.getElementById('editRideDropoffTime').value=toDateTimeInput(ride.dropoffRecordedAt);
+  const pickup=Array.isArray(ride.pickupCoords)?ride.pickupCoords:[];
+  const dropoff=Array.isArray(ride.dropoffCoords)?ride.dropoffCoords:[];
+  document.getElementById('editRidePickupLat').value=pickup[0]??'';
+  document.getElementById('editRidePickupLon').value=pickup[1]??'';
+  document.getElementById('editRideDropoffLat').value=dropoff[0]??'';
+  document.getElementById('editRideDropoffLon').value=dropoff[1]??'';
+  const editor=document.getElementById('rideEditPanel');
+  editor.style.display='block';
+  editor.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function readEditedPoint(latId,lonId,label) {
+  const latText=document.getElementById(latId).value.trim();
+  const lonText=document.getElementById(lonId).value.trim();
+  if(!latText&&!lonText) return null;
+  const lat=Number(latText),lon=Number(lonText);
+  if(!latText||!lonText||!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat > 90||lon < -180||lon > 180) {
+    alert(label+'の緯度・経度を正しく入力してください');
+    return false;
+  }
+  return [lat,lon];
+}
+function saveRideEdit() {
+  if(editingRideIndex===null||!state.rides[editingRideIndex]) return;
+  const fareInput=document.getElementById('editRideFare').value;
+  const fare=Number(fareInput);
+  if(!fareInput||!Number.isFinite(fare)||fare<0) {
+    alert('運賃を正しく入力してください');
+    return;
+  }
+  const pickupCoords=readEditedPoint('editRidePickupLat','editRidePickupLon','乗車地点');
+  if(pickupCoords===false) return;
+  const dropoffCoords=readEditedPoint('editRideDropoffLat','editRideDropoffLon','降車地点');
+  if(dropoffCoords===false) return;
+  const ride=state.rides[editingRideIndex];
+  ride.customerName=document.getElementById('editRideCustomerName').value.trim();
+  ride.customerPhone=document.getElementById('editRideCustomerPhone').value.trim();
+  ride.pickup=document.getElementById('editRidePickup').value.trim();
+  ride.dropoff=document.getElementById('editRideDropoff').value.trim();
+  ride.fare=fare;
+  ride.source=document.getElementById('editRideSource').value;
+  ride.pickupRecordedAt=fromDateTimeInput(document.getElementById('editRidePickupTime').value);
+  ride.pickupTime=ride.pickupRecordedAt;
+  ride.dropoffRecordedAt=fromDateTimeInput(document.getElementById('editRideDropoffTime').value);
+  ride.pickupCoords=pickupCoords;
+  ride.dropoffCoords=dropoffCoords;
+  persist();
+  cancelRideEdit();
+  alert('乗車記録を更新しました');
+}
+function cancelRideEdit() {
+  editingRideIndex=null;
+  document.getElementById('rideEditPanel').style.display='none';
 }
 function saveRide() {
+  if(pendingRideLocationRequests>0) {
+    alert('GPSを取得中です。取得が終わってから保存してください');
+    return;
+  }
   const fare=Number(document.getElementById('fare').value);
   if(!document.getElementById('fare').value || fare<0) {
     alert('運賃を入力してください'); return;
@@ -708,6 +830,9 @@ function saveRide() {
     dropoff:document.getElementById('dropoff').value.trim(),
     fare, source:document.getElementById('rideSource').value,
     pickupTime:rideStartTime||'', pickupCoords:pickupPoint, dropoffCoords:dropoffPoint
+    pickupTime:pickupPointTime||rideStartTime||'',
+    pickupRecordedAt:pickupPointTime||rideStartTime||'', dropoffRecordedAt:dropoffPointTime||'',
+    pickupCoords:pickupPoint, dropoffCoords:dropoffPoint
   };
   state.rides.push(r); persist();
   document.getElementById('pickup').value='';
@@ -716,6 +841,8 @@ function saveRide() {
   document.getElementById('rideCustomerPhone').value='';
   document.getElementById('fare').value='';
   rideStartTime='';
+  pickupPointTime='';
+  dropoffPointTime='';
   pickupPoint=null;
   dropoffPoint=null;
   document.getElementById('rideTime').textContent='乗車時刻：未記録';
