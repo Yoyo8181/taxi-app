@@ -279,6 +279,14 @@ nav button {
         <input id="dropoff" placeholder="降車場所">
       </div>
       <div class="field">
+        <button type="button" class="full secondary" onclick="captureRidePoint('pickup')">乗車地の現在地を記録</button>
+        <div class="note" id="pickupCoordsStatus">乗車地の位置情報：未記録</div>
+      </div>
+      <div class="field">
+        <button type="button" class="full secondary" onclick="captureRidePoint('dropoff')">降車地の現在地を記録</button>
+        <div class="note" id="dropoffCoordsStatus">降車地の位置情報：未記録</div>
+      </div>
+      <div class="field">
         <label>運賃（円）</label>
         <input id="fare" type="number" min="0" step="10" placeholder="例：2500">
       </div>
@@ -737,6 +745,23 @@ function stampPickup() {
   rideStartTime=new Date().toISOString();
   document.getElementById('rideTime').textContent='乗車時刻：'+new Date(rideStartTime).toLocaleString('ja-JP');
 }
+function captureRidePoint(type) {
+  if(!navigator.geolocation) {
+    alert('この端末では位置情報を利用できません');
+    return;
+  }
+  const status=document.getElementById(type+'CoordsStatus');
+  status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を取得中…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const point=[pos.coords.latitude,pos.coords.longitude];
+    if(type==='pickup') pickupPoint=point;
+    else dropoffPoint=point;
+    status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を記録しました（'+point[0].toFixed(6)+', '+point[1].toFixed(6)+'）';
+  },()=>{
+    status.textContent=(type==='pickup'?'乗車地':'降車地')+'の位置情報を取得できませんでした';
+    alert('位置情報が取得できません。ブラウザの位置情報許可を確認してください。');
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+}
 function saveRide() {
   const fare=Number(document.getElementById('fare').value);
   if(!document.getElementById('fare').value || fare<0) {
@@ -754,7 +779,11 @@ function saveRide() {
   document.getElementById('dropoff').value='';
   document.getElementById('fare').value='';
   rideStartTime='';
+  pickupPoint=null;
+  dropoffPoint=null;
   document.getElementById('rideTime').textContent='乗車時刻：未記録';
+  document.getElementById('pickupCoordsStatus').textContent='乗車地の位置情報：未記録';
+  document.getElementById('dropoffCoordsStatus').textContent='降車地の位置情報：未記録';
   alert('乗車記録を保存しました');
   openPage('homePage');
 }
