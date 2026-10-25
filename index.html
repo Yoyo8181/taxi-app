@@ -34,6 +34,10 @@ button { cursor:pointer; color:white; border:0; }
 header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .brand { font-size:16px; font-weight:800; }
 .status { color:var(--green); font-size:11px; }
+.ride-modal[hidden] { display:none; }
+.ride-modal { position:fixed; z-index:2000; inset:0; background:#000b; display:flex; align-items:center; justify-content:center; padding:16px; }
+.ride-modal-card { width:min(100%,420px); max-height:90dvh; overflow:auto; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 12px 40px #0008; }
+.ride-modal-card h2 { margin:0 0 10px; font-size:18px; }
 .metrics { display:grid; grid-template-columns:1.25fr 1fr 1fr; gap:7px; }
 .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:9px; min-width:0; }
 .caption { color:var(--muted); font-size:11px; }
@@ -197,6 +201,7 @@ nav button {
     <div>
       <div class="brand">🚕 営業ノート</div>
       <div class="status" id="shiftStatus">● 営業前</div>
+      <div class="status" id="rideStatus">● 空車</div>
     </div>
     <button class="secondary" style="padding:9px;border-radius:8px" onclick="toggleShift()" id="shiftButton">営業開始</button>
   </header>
@@ -410,6 +415,27 @@ nav button {
     <button onclick="openPage('historyPage',this)">☷ 履歴</button>
     <button onclick="openPage('settingsPage',this)">⚙ 設定</button>
 </nav>
+<div id="quickRideModal" class="ride-modal" role="dialog" aria-modal="true" aria-labelledby="quickRideTitle" hidden>
+  <div class="ride-modal-card">
+    <h2 id="quickRideTitle">流しの乗車中</h2>
+    <div class="note" id="quickRidePickupStatus">乗車地のGPS・時刻を記録しています</div>
+    <div class="field">
+      <label for="quickRideFare">運賃（円）必須</label>
+      <input id="quickRideFare" type="number" min="0" step="10" inputmode="numeric" placeholder="例：2500" oninput="updateQuickRideDraft()">
+    </div>
+    <div class="field">
+      <label for="quickRideCustomerName">お客様の氏名（任意）</label>
+      <input id="quickRideCustomerName" autocomplete="name" placeholder="氏名" oninput="updateQuickRideDraft()">
+    </div>
+    <div class="field">
+      <label for="quickRideCustomerPhone">電話番号（任意）</label>
+      <input id="quickRideCustomerPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="電話番号" oninput="updateQuickRideDraft()">
+    </div>
+    <button id="quickRideDropoffButton" class="full primary" type="button" onclick="finishQuickRide()" disabled>降車を記録</button>
+    <button class="full secondary" type="button" onclick="closeQuickRideModal()">閉じる（賃走は継続）</button>
+    <div class="note" id="quickRideDropoffStatus"></div>
+  </div>
+</div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -441,6 +467,7 @@ function render() {
   document.getElementById('progressBar').style.width=Math.min(100,state.goal?total/state.goal*100:0)+'%';
   document.getElementById('shiftStatus').textContent=state.active?'● 営業中':'● 営業前';
   document.getElementById('shiftButton').textContent=state.active?'営業終了':'営業開始';
+  document.getElementById('rideStatus').textContent=state.currentRide?'● 賃走中（'+escapeHtml(state.currentRide.source)+'）':'● 空車';
   document.getElementById('goalInput').value=state.goal;
   document.getElementById('historyList').innerHTML = state.rides.slice().reverse().map(r=>
     `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
@@ -672,9 +699,114 @@ function toggleShift() {
   persist();
 }
 function recordDispatch(source) {
+  if(state.currentRide) {
+    showQuickRideModal();
+    return;
+  }
+  if(source==='流し') {
+    startQuickRide(source);
+    return;
+  }
   state.dispatches.push({source,time:new Date().toISOString(),date:today()});
   persist();
   document.getElementById('mapStatus').textContent=source+' を記録しました';
+}
+function startQuickRide(source) {
+  const startedAt=new Date().toISOString();
+  const ride={
+    id:Date.now().toString()+Math.random().toString(36).slice(2),
+    source,customerName:'',customerPhone:'',fare:'',pickup:'',dropoff:'',
+    pickupRecordedAt:startedAt,pickupTime:startedAt,pickupCoords:null,
+    dropoffRecordedAt:'',dropoffCoords:null
+  };
+  state.currentRide=ride;
+  persist();
+  document.getElementById('mapStatus').textContent=source+'で賃走中';
+  showQuickRideModal();
+  captureQuickRideLocation(ride.id,'pickup');
+}
+function showQuickRideModal() {
+  const ride=state.currentRide;
+  if(!ride) return;
+  document.getElementById('quickRideFare').value=ride.fare??'';
+  document.getElementById('quickRideCustomerName').value=ride.customerName||'';
+  document.getElementById('quickRideCustomerPhone').value=ride.customerPhone||'';
+  document.getElementById('quickRidePickupStatus').textContent=ride.pickupCoords?'乗車地のGPSを記録しました':'乗車地のGPSを取得中、または未取得です';
+  document.getElementById('quickRideDropoffStatus').textContent='';
+  document.getElementById('quickRideModal').hidden=false;
+  updateQuickRideDraft();
+}
+function updateQuickRideDraft() {
+  const ride=state.currentRide;
+  const fareInput=document.getElementById('quickRideFare');
+  if(ride&&fareInput) {
+    ride.fare=fareInput.value;
+    ride.customerName=document.getElementById('quickRideCustomerName').value.trim();
+    ride.customerPhone=document.getElementById('quickRideCustomerPhone').value.trim();
+    localStorage.setItem(KEY,JSON.stringify(state));
+  }
+  const fare=Number(fareInput.value);
+  document.getElementById('quickRideDropoffButton').disabled=!fareInput.value||!Number.isFinite(fare)||fare<0||quickRideFinishing;
+}
+function closeQuickRideModal() {
+  updateQuickRideDraft();
+  document.getElementById('quickRideModal').hidden=true;
+}
+let quickRideFinishing=false;
+function captureQuickRideLocation(rideId,type,callback) {
+  const statusId=type==='pickup'?'quickRidePickupStatus':'quickRideDropoffStatus';
+  const status=document.getElementById(statusId);
+  if(!navigator.geolocation) {
+    status.textContent='GPSは取得できませんでした。時刻は記録しています';
+    callback(null);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const point=[pos.coords.latitude,pos.coords.longitude];
+    const ride=state.currentRide?.id===rideId?state.currentRide:state.rides.find(item=>item.id===rideId);
+    if(ride) {
+      if(type==='pickup') ride.pickupCoords=point;
+      else ride.dropoffCoords=point;
+      persist();
+    }
+    status.textContent=(type==='pickup'?'乗車地':'降車地')+'のGPSを記録しました';
+    callback(point);
+  },()=>{
+    status.textContent='GPSは取得できませんでした。時刻は記録しています';
+    callback(null);
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+function finishQuickRide() {
+  const ride=state.currentRide;
+  if(!ride||quickRideFinishing) return;
+  updateQuickRideDraft();
+  const fareInput=document.getElementById('quickRideFare').value;
+  const fare=Number(fareInput);
+  if(!fareInput||!Number.isFinite(fare)||fare<0) {
+    alert('運賃を入力してください');
+    return;
+  }
+  quickRideFinishing=true;
+  ride.fare=fare;
+  ride.dropoffRecordedAt=new Date().toISOString();
+  localStorage.setItem(KEY,JSON.stringify(state));
+  const button=document.getElementById('quickRideDropoffButton');
+  button.disabled=true;
+  button.textContent='降車地点を記録中…';
+  document.getElementById('quickRideDropoffStatus').textContent='降車時刻を記録しました。GPSを取得しています';
+  captureQuickRideLocation(ride.id,'dropoff',()=>{
+    const current=state.currentRide;
+    if(!current||current.id!==ride.id) return;
+    current.date=today();
+    current.time=new Date(current.dropoffRecordedAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    state.rides.push({...current});
+    state.currentRide=null;
+    quickRideFinishing=false;
+    document.getElementById('quickRideModal').hidden=true;
+    button.textContent='降車を記録';
+    persist();
+    document.getElementById('mapStatus').textContent='乗車記録を保存しました';
+  });
 }
 function openPage(id, button) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -913,6 +1045,7 @@ function initMap() {
 }
 render();
 initMap();
+if(state.currentRide) showQuickRideModal();
 window.addEventListener('resize',()=>{if(map)map.invalidateSize();});
 </script>
 </body>
