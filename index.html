@@ -82,15 +82,12 @@ nav button.active { color:var(--green); background:#203b43; }
   min-height:0;
   overflow:auto;
 }
-
 .page.active {
   display:block;
 }
-
 #homePage {
   overflow:hidden;
 }
-
 #homePage .mapbox {
   height:100%;
 }
@@ -110,8 +107,6 @@ nav button.active { color:var(--green); background:#203b43; }
   .action { min-height:37px; }
   nav button { padding:5px 2px; }
 }
-
-
 .reservation-preview {
   display: grid;
   grid-template-columns: 1fr;
@@ -122,7 +117,6 @@ nav button.active { color:var(--green); background:#203b43; }
   border-radius: 9px;
   background: #101d2c;
 }
-
 .reservation-row {
   display: flex;
   align-items: center;
@@ -132,19 +126,15 @@ nav button.active { color:var(--green); background:#203b43; }
   font-size: 12px;
   color: #dce7f2;
 }
-
 .reservation-row strong {
   flex: 0 0 42px;
   color: #70d6a1;
 }
-
 .reservation-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-
 .reservation-row button {
   background: #263b50;
   color: #ffffff;
@@ -155,7 +145,6 @@ nav button.active { color:var(--green); background:#203b43; }
   font-weight: bold;
   white-space: nowrap;
 }
-
   
 /* 下部メニューを5つ横一列にする */
 nav {
@@ -163,7 +152,6 @@ nav {
   flex-wrap: nowrap;
   gap: 2px;
 }
-
 nav button {
   flex: 1;
   min-width: 0;
@@ -171,7 +159,6 @@ nav button {
   font-size: 11px;
   white-space: nowrap;
 }
-
 /* 予約一覧の編集・削除ボタンを見やすくする */
 #reservationList .listitem button {
   background: #263b50;
@@ -182,7 +169,6 @@ nav button {
   font-size: 13px;
   font-weight: bold;
 }
-
 /* 予約一覧の見出しは罫線だけで区切る */
 .reservation-header {
   background: transparent;
@@ -193,20 +179,16 @@ nav button {
   margin-bottom: 8px;
   box-shadow: none;
 }
-
 .reservation-header strong {
   color: var(--text);
   font-size: 14px;
 }
-
 /* 顧客・予約追加ボタンの縁取り */
 .reservation-header button {
   border: 1px solid #438cff;
   border-radius: 7px;
   font-weight: bold;
 }
-
-
 </style>
 </head>
 <body>
@@ -218,7 +200,6 @@ nav button {
     </div>
     <button class="secondary" style="padding:9px;border-radius:8px" onclick="toggleShift()" id="shiftButton">営業開始</button>
   </header>
-
   <section class="metrics">
     <div class="panel">
       <div class="caption">本日の売上</div>
@@ -237,14 +218,12 @@ nav button {
       <div class="sub">残り売上</div>
     </div>
   </section>
-
  <section id="dispatchButtons" class="dispatch">
     <button class="street" onclick="recordDispatch('流し')">流し</button>
     <button class="uber" onclick="recordDispatch('Uber')">Uber</button>
     <button class="go" onclick="recordDispatch('GO')">GO</button>
     <button class="other" onclick="recordDispatch('その他')">その他</button>
   </section>
-
   <main class="page active" id="homePage">
     <div class="mapbox">
       <div id="map"></div>
@@ -270,6 +249,14 @@ nav button {
   <main class="page" id="recordPage">
     <h2>🚘 乗車・降車記録</h2>
     <div class="panel">
+      <div class="field">
+        <label>お客様の名前（任意）</label>
+        <input id="rideCustomerName" autocomplete="name" placeholder="例：山田 太郎">
+      </div>
+      <div class="field">
+        <label>電話番号（任意）</label>
+        <input id="rideCustomerPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="例：09012345678">
+      </div>
       <div class="field">
         <label>乗車場所</label>
         <input id="pickup" placeholder="乗車場所">
@@ -302,7 +289,6 @@ nav button {
       <div class="note" id="rideTime">乗車時刻：未記録</div>
     </div>
   </main>
-
   <main class="page" id="reservationPage">
     <h2>📅 予約登録</h2>
     <div class="panel">
@@ -355,8 +341,6 @@ nav button {
       <button class="full secondary" onclick="openPage('homePage')">トップに戻る</button>
     </div>
   </main>
-
-
   <main class="page" id="customerListPage">
     <h2>👥 顧客一覧</h2>
     <div class="panel">
@@ -368,7 +352,6 @@ nav button {
       <button class="full secondary" onclick="openPage('reservationListPage')">予約一覧に戻る</button>
     </div>
   </main>
-
   <main class="page" id="historyPage">
     <h2>📋 営業履歴</h2>
     <div class="panel">
@@ -379,7 +362,6 @@ nav button {
       <div id="historyList"></div>
     </div>
   </main>
-
   <main class="page" id="settingsPage">
     <h2>⚙️ 設定・集計</h2>
     <div class="panel">
@@ -396,7 +378,6 @@ nav button {
       <p class="note">記録はこのブラウザ内に保存されます。ブラウザのデータ削除や別端末では記録が消えたり共有されなかったりするため、定期的にデータを出力してください。</p>
     </div>
   </main>
-
   <section id="homeActions" class="actions">
     <button class="action primary" onclick="toggleRest()">休憩</button>
     <button class="action secondary" onclick="openPage('historyPage')">データ</button>
@@ -404,7 +385,6 @@ nav button {
     <button class="action secondary" onclick="openPage('settingsPage')">その他</button>
     <button class="action secondary" onclick="toggleShift()">帰庫</button>
   </section>
-
  
 <nav>
     <button class="active" onclick="openPage('homePage',this)">⌂ ホーム</button>
@@ -413,9 +393,7 @@ nav button {
     <button onclick="openPage('historyPage',this)">☷ 履歴</button>
     <button onclick="openPage('settingsPage',this)">⚙ 設定</button>
 </nav>
-
 </div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const KEY = 'yoyoTaxiV1';
@@ -424,7 +402,6 @@ let state = JSON.parse(localStorage.getItem(KEY) || 'null') || {
 };
 let map, userMarker, rideStartTime = '';
 let pickupPoint = null, dropoffPoint = null;
-
 function persist() {
   localStorage.setItem(KEY, JSON.stringify(state));
   render();
@@ -435,11 +412,9 @@ function today() {
 }
 function yen(n) { return '¥'+Number(n||0).toLocaleString('ja-JP'); }
 function todaysRides() { return state.rides.filter(r=>r.date===today()); }
-
 function render() {
   const rides = todaysRides();
   const total = rides.reduce((s,r)=>s+Number(r.fare||0),0);
-
   document.getElementById('sales').textContent=yen(total);
   document.getElementById('rideCount').textContent=rides.length+'回';
   document.getElementById('remaining').textContent=yen(Math.max(0,state.goal-total));
@@ -448,11 +423,10 @@ function render() {
   document.getElementById('shiftStatus').textContent=state.active?'● 営業中':'● 営業前';
   document.getElementById('shiftButton').textContent=state.active?'営業終了':'営業開始';
   document.getElementById('goalInput').value=state.goal;
-
   document.getElementById('historyList').innerHTML = state.rides.slice().reverse().map(r=>
     `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div><div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
+    `<div class="listitem"><div class="row"><strong>${yen(r.fare)}</strong><span>${escapeHtml(r.source)}</span></div><div>${escapeHtml(r.pickup||'乗車場所未入力')} → ${escapeHtml(r.dropoff||'降車場所未入力')}</div>${r.customerName||r.customerPhone?`<div>お客様：${escapeHtml(r.customerName||'名前未入力')}（${escapeHtml(r.customerPhone||'電話番号未入力')}）</div>`:''}<div class="note">${escapeHtml(r.date||'')} ${escapeHtml(r.time||'')}</div></div>`
   ).join('') || '<p class="note">まだ記録がありません。</p>';
-
   // 予約を日時順に並べる
   const reservations = (state.dispatches || [])
     .filter(d => d.source === '予約')
@@ -473,11 +447,9 @@ function render() {
         .localeCompare(b.date + ' ' + b.reservationTime)
     )
     .slice(0,2);
-
   [1,2].forEach((n,i) => {
     const row = document.getElementById('reservationRow' + n);
     if (!row) return;
-
     const r = reservations[i];
        row.innerHTML = r
       ? `<strong>予約${n}</strong>
@@ -486,9 +458,7 @@ function render() {
          <button type="button" onclick="deleteReservation('${r.id || ''}')">削除</button>`
       : `<strong>予約${n}</strong><span>予約はありません</span>`;
   });
-
   const reservationList = document.getElementById('reservationList');
-
   if (reservationList) {
     const allReservations = (state.dispatches || [])
       .filter(d => d.source === '予約')
@@ -504,7 +474,6 @@ function render() {
         (a.date + ' ' + a.reservationTime)
           .localeCompare(b.date + ' ' + b.reservationTime)
       );
-
     reservationList.innerHTML = allReservations.length
       ? allReservations.map(r => `
           <div class="listitem">
@@ -520,26 +489,20 @@ function render() {
         `).join('')
       : '<p class="note">予約はありません。</p>';
   }
-
   // 顧客一覧を表示
   const customerList = document.getElementById('customerList');
-
   if (customerList) {
     if (!Array.isArray(state.customers)) {
       state.customers = [];
     }
-
     const searchInput = document.getElementById('customerSearch');
     const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
-
     const filteredCustomers = state.customers.filter(c => {
   const name = (c.name || '').toLowerCase();
   const phone = (c.phone || '').replace(/\D/g, '');
   const nameKeyword = keyword;
   const phoneKeyword = keyword.replace(/\D/g, '');
-
   if (!keyword) return true;
-
     return name.includes(nameKeyword) ||
     (phoneKeyword !== '' && phone.includes(phoneKeyword));
 });
@@ -552,36 +515,27 @@ function render() {
         `).join('')
       : '<p class="note">顧客情報はありません。</p>';
   }
-
 }
-
 let resting = false;
-
 function toggleRest() {
   resting = !resting;
   document.getElementById('mapStatus').textContent =
     resting ? '休憩中' : '営業を再開しました';
   alert(resting ? '休憩を開始しました' : '休憩を終了しました');
 }
-
 let editingReservationId = null;
-
 function addReservation() {
   const dateInput = document.getElementById('reservationDate');
   if (dateInput && !dateInput.value) {
     dateInput.value = today();
   }
-
   openPage('reservationPage');
 }
-
-
 function editReservation(id) {
   if (!id) {
     alert('この予約は古いデータのため、編集できません。');
     return;
   }
-
   const reservation = state.dispatches.find(
   d => d.source === '予約' && String(d.id) === String(id)
 );
@@ -589,34 +543,26 @@ function editReservation(id) {
     alert('予約が見つかりません。');
     return;
   }
-
   editingReservationId = id;
-
   document.getElementById('reservationDate').value = reservation.date || '';
   document.getElementById('reservationClock').value = reservation.reservationTime || '';
   document.getElementById('reservationCustomer').value = reservation.customer || '';
   document.getElementById('reservationPickup').value = reservation.pickup || reservation.place || '';
   document.getElementById('reservationDropoff').value = reservation.dropoff || '';
-
   openPage('reservationPage');
 }
-
 function deleteReservation(id) {
   if (!id) {
     alert('この予約は古いデータのため、削除できません。');
     return;
   }
-
   if (!confirm('この予約を削除しますか？')) {
     return;
   }
-
   state.dispatches = state.dispatches.filter(d => d.id !== id);
   persist();
   alert('予約を削除しました');
 }
-
-
 function saveReservation() {
   const date = document.getElementById('reservationDate').value;
   const time = document.getElementById('reservationClock').value;
@@ -624,25 +570,20 @@ function saveReservation() {
   const phone = document.getElementById('reservationPhone').value.trim();
   const pickup = document.getElementById('reservationPickup').value.trim();
   const dropoff = document.getElementById('reservationDropoff').value.trim();
-
   if (!date || !time) {
     alert('予約日と予約時刻を入力してください');
     return;
   }
-
   
   // 電話番号を使って顧客情報を自動登録・更新
   const normalizedPhone = phone.replace(/\D/g, '');
-
   if (normalizedPhone) {
     if (!Array.isArray(state.customers)) {
       state.customers = [];
     }
-
     const existingCustomer = state.customers.find(
       c => (c.phone || '').replace(/\D/g, '') === normalizedPhone
     );
-
     if (existingCustomer) {
       // 同じ電話番号なら既存の顧客情報を更新
       if (customer) {
@@ -660,17 +601,14 @@ function saveReservation() {
       });
     }
   }
-
   if (editingReservationId !== null) {
     const index = state.dispatches.findIndex(
       d => d.id === editingReservationId
     );
-
     if (index === -1) {
       alert('編集する予約が見つかりません。');
       return;
     }
-
     state.dispatches[index] = {
       ...state.dispatches[index],
       customer,
@@ -695,22 +633,17 @@ function saveReservation() {
       time: new Date().toISOString()
     });
   }
-
   editingReservationId = null;
   persist();
-
   document.getElementById('reservationDate').value = '';
   document.getElementById('reservationClock').value = '';
   document.getElementById('reservationCustomer').value = '';
   document.getElementById('reservationPhone').value = '';
   document.getElementById('reservationPickup').value = '';
   document.getElementById('reservationDropoff').value = '';
-
   openPage('homePage');
   alert('予約を保存しました');
 }
-
-
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -769,6 +702,8 @@ function saveRide() {
   }
   const r={
     date:today(), time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),
+    customerName:document.getElementById('rideCustomerName').value.trim(),
+    customerPhone:document.getElementById('rideCustomerPhone').value.trim(),
     pickup:document.getElementById('pickup').value.trim(),
     dropoff:document.getElementById('dropoff').value.trim(),
     fare, source:document.getElementById('rideSource').value,
@@ -777,6 +712,8 @@ function saveRide() {
   state.rides.push(r); persist();
   document.getElementById('pickup').value='';
   document.getElementById('dropoff').value='';
+  document.getElementById('rideCustomerName').value='';
+  document.getElementById('rideCustomerPhone').value='';
   document.getElementById('fare').value='';
   rideStartTime='';
   pickupPoint=null;
